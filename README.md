@@ -5,7 +5,10 @@ Search is a webapp suitable for tomcat6 (or by slight modification to
 the install scripts) to tomcat7. It builds a Lucene index of the MVDs,
 annotations and metadata for use within Ecdosis.
 
-To rebuild it do a clearn rebuild within NetBeans, or produce a fresh 
+Search prints out progress of index-building as a series of lines 
+consisting of percent complete numbers, up to and including 100.
+
+To rebuild it do a clean rebuild within NetBeans, or produce a fresh 
 jar in dist/Search.jar. Then run the war-building script:
 
     sudo ./buildwar.sh
@@ -30,6 +33,10 @@ which is set up with:
 
     sudo chmod -R 775 /home/ecdosis/index
 
+Support for tomcat7 will require some minor adjustments to the build 
+scripts etc., basically by replacing "tomcat6" with "tomcat7" where 
+appropriate.
+
 INIT PARAMETRERS
 ================
 repository 
@@ -40,7 +47,8 @@ historically COUCH was.
 indexRoot
 
 The absoute path to the root directory to write the indices, one per 
-language in s separate sub-dir. Defaults to /home/ecdosis/index
+language in a separate sub-dir. Defaults to /home/ecdosis/index. This is 
+probably the only setting you may need to change.
 
 dbPort
 
