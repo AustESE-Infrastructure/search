@@ -14,4 +14,5 @@ public class Service {
  public static final String QUERY = "query";
  public static final String BUILD = "build";
  public static final String SETTINGS = "settings";
+ public static final String FIND = "find";
 }

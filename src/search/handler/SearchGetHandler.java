@@ -20,10 +20,11 @@ package search.handler;
 
 import calliope.core.Utils;
 import search.constants.Service;
+import search.constants.Params;
 import search.exception.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import java.io.PrintWriter;
+
 
 /**
  * Get a Search document from the database
@@ -31,6 +32,8 @@ import java.io.PrintWriter;
  */
 public class SearchGetHandler extends SearchHandler
 {
+    int start;
+    String language = "english";
     public void handle(HttpServletRequest request,
             HttpServletResponse response, String urn) throws SearchException 
     {
@@ -40,8 +43,26 @@ public class SearchGetHandler extends SearchHandler
             String first = Utils.first(urn);
             if ( first.equals(Service.BUILD) )
             {
-                PrintWriter writer = response.getWriter();
-                BuildIndex.rebuild(writer);
+                response.setContentType("text/plain");
+                BuildIndex bi = new BuildIndex(response);
+                bi.rebuild();
+            }
+            if ( first.equals(Service.FIND) )
+            {
+                response.setContentType("application/json");
+                String query = request.getParameter(Params.QUERY);
+                if ( query != null && query.length()>0 )
+                {
+                    String langStr = request.getParameter(Params.LANGUAGE);
+                    if ( langStr != null && langStr.length()> 0 )
+                        language = langStr;
+                    String startStr = request.getParameter(Params.START);
+                    if ( startStr != null && startStr.length()>0 )
+                        start = Integer.parseInt(startStr);
+                    Find f = new Find( );
+                    String res = f.search( query, language, start );
+                    response.getWriter().println(res );
+                }
             }
             else
                 throw new Exception("Unknown GET service "+first);

@@ -17,6 +17,8 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.util.Version;
 
+import javax.servlet.http.HttpServletResponse;
+
 import java.io.File;
 import org.json.simple.*;
 
@@ -35,7 +37,6 @@ import search.JettyServer;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.Iterator;
-import java.io.PrintWriter;
 import java.io.IOException;
 import java.util.HashMap;
 
@@ -46,11 +47,14 @@ import java.util.HashMap;
 
 public class BuildIndex 
 {
+    HttpServletResponse response;
+    private String[] cortexs;
+    private String[] metadata;
+    private String[] annotations;
+    private float lastPercent;
+    int nDocs;
+    int done;
     private static HashSet<String> metadataKeys;
-    private static String[] cortexs;
-    private static String[] metadata;
-    private static String[] annotations;
-    private static float lastPercent;
     static HashSet<String> okLanguages;
     static String[] italianStopwords = {"﻿a", "adesso", "ai", "al", "alla", 
         "allo", "allora", "altre", "altri", "altro", "anche", "ancora", 
@@ -70,23 +74,27 @@ public class BuildIndex
         "stesso", "su", "subito", "sul", "sulla", "tanto", "te", "tempo", 
         "terzo", "tra", "tre", "triplo", "ultimo", "un", "una", "uno", "va", 
         "vai", "voi", "volte", "vostro"};
-    // add other stoplists here
-    static {
+    static 
+    {
         metadataKeys = new HashSet<String>();
         metadataKeys.add( "title");
         okLanguages = new HashSet<String>();
         okLanguages.add("english");
         okLanguages.add("italian");
+    }
+    // add other stoplists here
+    BuildIndex( HttpServletResponse response )
+    {
+        this.response = response;
         // add other languages here
         lastPercent = 0.0f;
-        // add new metadata files to be indexed here
     }
     /**
      * Extract the language code from the docid
      * @param docid the docid should start with the language
      * @return a kosher language name or "english"
      */
-    private static String getLanguage( String docid )
+    private String getLanguage( String docid )
     {
         int pos = docid.indexOf("/");
         if ( pos != -1 )
@@ -102,7 +110,7 @@ public class BuildIndex
      * @param languages the set of languages to build
      * @param docids an array of docids from the database
      */
-    private static void getFoundLanguages( 
+    private void getFoundLanguages( 
         HashMap<String,IndexWriter> languages, 
         String[] docids )
     {
@@ -126,13 +134,13 @@ public class BuildIndex
      * @param language the language to get the set for
      * @return a stopword set
      */
-    private static CharArraySet getStopwordSet( String language )
+    private CharArraySet getStopwordSet( String language )
     {
         if ( language.equals("english") ) 
             return StopAnalyzer.ENGLISH_STOP_WORDS_SET;
         else if ( language.equals("italian") )
         {
-            CharArraySet it = new CharArraySet(Version.LATEST, 
+            CharArraySet it = new CharArraySet(
                 italianStopwords.length, true);
             for ( int i=0;i<italianStopwords.length;i++ )
                 it.add( italianStopwords[i] );
@@ -145,11 +153,10 @@ public class BuildIndex
      * Index all text files under a directory. 
      * @param progress the response writer to report percentage progress
      */
-    public static void rebuild( PrintWriter progress ) throws SearchException
+    public void rebuild() throws SearchException
     {
         try
         {
-            lastPercent = 0.0f;
             File index = new File(JettyServer.indexRoot);
             if ( !index.exists() )
                 if ( !index.mkdirs() )
@@ -158,7 +165,7 @@ public class BuildIndex
             cortexs = conn.listCollection(Database.CORTEX);
             annotations = conn.listCollection(Database.ANNOTATIONS);
             metadata = conn.listCollection(Database.METADATA);
-            int nDocs = metadata.length+annotations.length+cortexs.length;
+            nDocs = metadata.length+annotations.length+cortexs.length;
             HashMap<String,IndexWriter> languages = new HashMap<String,IndexWriter>();
             getFoundLanguages( languages, cortexs );
             getFoundLanguages( languages, metadata );
@@ -182,10 +189,9 @@ public class BuildIndex
                 IndexWriter writer = new IndexWriter(dir, iwc);
                 languages.put( key, writer );
             }
-            indexCorTexs(conn,languages,progress,0,nDocs);
-            indexMetadata(conn,languages,progress,cortexs.length,nDocs);
-            indexAnnotations(conn,languages,progress,cortexs.length
-                +metadata.length,nDocs);
+            indexCorTexs(conn,languages);
+            indexMetadata(conn,languages);
+            indexAnnotations(conn,languages);
             iter = keys.iterator();
             // close all the open indices
             while ( iter.hasNext() )
@@ -199,18 +205,29 @@ public class BuildIndex
             throw new SearchException(e);
         }
     }
+    private void incDone() throws IOException
+    {
+        done++;
+        if ( nDocs==done )
+        {
+            response.getWriter().println(100);
+            response.getWriter().flush();
+        }
+        else if ( (float)(done*100)/(float)nDocs-lastPercent > 1.0f )
+        {
+            lastPercent = (float)(done*100)/(float)nDocs;
+            response.getWriter().println(Math.round(lastPercent));
+            response.getWriter().flush();
+        }
+    }
     /**
      * Index all the cortexs and all their versions
      * @param conn the database connection
      * @param map map of languages to index-writers
-     * @param progress the response to write progress to
-     * @param done how many docs have been processed so far
-     * @param total the total number of documents to process
      * @throws SearchException 
      */
-    private static void indexCorTexs( Connection conn, 
-        HashMap<String,IndexWriter> map, 
-        PrintWriter progress, int done, int total ) throws SearchException
+    private void indexCorTexs( Connection conn, 
+        HashMap<String,IndexWriter> map ) throws SearchException
     {
         try
         {
@@ -259,13 +276,7 @@ public class BuildIndex
                         writer.addDocument(doc);
                     }
                 }
-                done++;
-                if ( (float)(done*100)/(float)total-lastPercent > 1.0f )
-                {
-                    lastPercent = (float)(done*100)/(float)total;
-                    progress.println(Math.round(lastPercent));
-                    progress.flush();
-                }
+                incDone();
             }
         }
         catch ( Exception e )
@@ -277,14 +288,10 @@ public class BuildIndex
      * Index all the metadata
      * @param conn the database connection
      * @param map map of languages to index-writers
-     * @param progress the response to write progress to
-     * @param done how many docs have been processed so far
-     * @param total the total number of documents to process
      * @throws SearchException 
      */
-    private static void indexMetadata( Connection conn, 
-        HashMap<String,IndexWriter> map,
-        PrintWriter progress, int done, int total ) throws SearchException
+    private void indexMetadata( Connection conn, 
+        HashMap<String,IndexWriter> map ) throws SearchException
     {
         try
         {
@@ -319,13 +326,7 @@ public class BuildIndex
                     if ( doc != null )
                         writer.addDocument(doc);
                 }
-                done++;
-                if ( (float)(done*100)/(float)total-lastPercent > 1.0f )
-                {
-                    lastPercent = (float)(done*100)/(float)total;
-                    progress.println(Math.round(lastPercent));
-                    progress.flush();
-                }
+                incDone();
             }
         }
         catch ( Exception e )
@@ -337,14 +338,10 @@ public class BuildIndex
      * Index all the annotations
      * @param conn the database connection
      * @param map map of languages to index-writers
-     * @param progress the response to write progress to
-     * @param done how many docs have been processed so far
-     * @param total the total number of documents to process
      * @throws SearchException 
      */
-    private static void indexAnnotations( Connection conn, 
-        HashMap<String,IndexWriter> map,
-        PrintWriter progress, int done, int total ) throws SearchException
+    private void indexAnnotations( Connection conn, 
+        HashMap<String,IndexWriter> map ) throws SearchException
     {
         try
         {
@@ -368,18 +365,7 @@ public class BuildIndex
                     doc.add( new TextField(JSONKeys.CONTENT, sr) );
                     writer.addDocument(doc);
                 }
-                done++;
-                if ( (float)(done*100)/(float)total-lastPercent > 1.0f )
-                {
-                    lastPercent = (float)(done*100)/(float)total;
-                    progress.println(Math.round(lastPercent));
-                    progress.flush();
-                }
-                else if ( total==done )
-                {
-                    progress.println(100);
-                    progress.flush();
-                }
+                incDone();
             }
         }
         catch ( Exception e )
