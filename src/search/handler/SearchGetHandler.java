@@ -47,7 +47,7 @@ public class SearchGetHandler extends SearchHandler
                 BuildIndex bi = new BuildIndex(response);
                 bi.rebuild();
             }
-            if ( first.equals(Service.FIND) )
+            else if ( first.equals(Service.FIND) )
             {
                 response.setContentType("application/json");
                 String query = request.getParameter(Params.QUERY);
