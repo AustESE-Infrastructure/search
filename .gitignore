@@ -4,5 +4,5 @@ lucene-4.10.3/
 manifest.mf
 project-information.txt
 search.war
-search/
+/search/
 stop-words/
