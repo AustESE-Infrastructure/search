@@ -54,7 +54,7 @@ public class BuildIndex
     private float lastPercent;
     int nDocs;
     int done;
-    private static HashSet<String> metadataKeys;
+    static HashSet<String> metadataKeys;
     static HashSet<String> okLanguages;
     static String[] italianStopwords = {"﻿a", "adesso", "ai", "al", "alla", 
         "allo", "allora", "altre", "altri", "altro", "anche", "ancora", 
@@ -258,6 +258,9 @@ public class BuildIndex
                                 Field.Store.YES);
                             Field versionId = new StringField("vid", vPath, 
                                 Field.Store.YES);
+                            Field database = new StringField("database",
+                                Database.CORTEX,Field.Store.YES);
+                            doc.add( database );
                             doc.add( docid );
                             doc.add( versionId );
                             StringReader sr = new StringReader( text );
@@ -270,6 +273,9 @@ public class BuildIndex
                         Document doc = new Document();
                         Field docid = new StringField("docid", cortexs[i], 
                             Field.Store.YES);
+                        Field database = new StringField("database",
+                            Database.CORTEX,Field.Store.YES);
+                        doc.add( database );
                         doc.add(docid);
                         StringReader sr = new StringReader( body );
                         doc.add(new TextField(JSONKeys.CONTENT, sr) );
@@ -324,7 +330,12 @@ public class BuildIndex
                         }
                     }
                     if ( doc != null )
+                    {
+                        Field database = new StringField("database",
+                            Database.METADATA,Field.Store.YES);
+                        doc.add( database );
                         writer.addDocument(doc);
+                    }
                 }
                 incDone();
             }
@@ -363,6 +374,9 @@ public class BuildIndex
                     StringReader sr = new StringReader( 
                         (String)jDoc.get(JSONKeys.BODY) );
                     doc.add( new TextField(JSONKeys.CONTENT, sr) );
+                    Field database = new StringField("database",
+                        Database.ANNOTATIONS,Field.Store.YES);
+                    doc.add( database );
                     writer.addDocument(doc);
                 }
                 incDone();

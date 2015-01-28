@@ -7,10 +7,12 @@
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/handler/SearchHandler.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/handler/SearchGetHandler.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/JettyServer.java</file>
+            <file>file:/home/desmond/NetBeansProjects/Search/src/search/handler/Find.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/handler/SearchPostHandler.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/JettyServerThread.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/constants/Service.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/SearchWebApp.java</file>
+            <file>file:/home/desmond/NetBeansProjects/Search/src/search/constants/Params.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/exception/SearchException.java</file>
         </group>
     </open-files>
