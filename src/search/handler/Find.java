@@ -10,22 +10,7 @@ import calliope.core.database.Connection;
 import calliope.core.database.Connector;
 import edu.luc.nmerge.mvd.MVD;
 import edu.luc.nmerge.mvd.MVDFile;
-import java.io.File;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.standard.StandardAnalyzer;
-
-import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.IndexSearcher;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.ScoreDoc;
-import org.apache.lucene.search.TopDocs;
-import org.apache.lucene.store.FSDirectory;
-import search.JettyServer;
 import search.exception.SearchException;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.StringTokenizer;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
@@ -35,23 +20,7 @@ import org.json.simple.JSONValue;
  */
 public class Find {
     static final int MAX_PRECIS_TOKENS = 20;
-    static QueryParser parser;
     static int HITS_PER_PAGE = 20;
-    static HashMap<String,IndexSearcher> searchers;
-    // we need to let this time-consuming load to happen only once
-    static void initIndexSearchers() throws Exception
-    {
-        searchers = new HashMap<String,IndexSearcher>();
-        File indexDir = new File(JettyServer.indexRoot);
-        File[] languageDirs = indexDir.listFiles();
-        for ( int i=0;i<languageDirs.length;i++ )
-        {
-            IndexReader reader = DirectoryReader.open(
-                FSDirectory.open(languageDirs[i]));
-            IndexSearcher searcher = new IndexSearcher(reader);
-            searchers.put( languageDirs[i].getName(), searcher );
-        }
-    }
     /**
     * Get the last component of the version id, its short name
     * @param vid the full version id
@@ -119,8 +88,8 @@ public class Find {
                     group(vid[0]) );
                 if ( version != 0 )
                 {
-                    byte[] data = mvd.getVersion( version );
-                    body = new String( data, encoding );
+                    //byte[] data = mvd.getVersion( version );
+                   // body = new String( data, encoding );
                 }
             }
             body = sample( body );
@@ -157,94 +126,6 @@ public class Find {
             throw new SearchException( e );
         }
     }
-    /**
-     * We add any kosher metadata fields - those indexed in the first place
-     * @param docid the document identifier
-     * @return the digest - a JSON document
-     * @throws SearchException 
-     */
-    String digestMetadata( String docid ) throws SearchException
-    {
-        try
-        {
-            Connection conn = Connector.getConnection();
-            StringBuilder doc = new StringBuilder();
-            String bson = conn.getFromDb( Database.METADATA, docid );
-            JSONObject jDoc = (JSONObject)JSONValue.parse( bson );
-            doc.append("{ ");
-            doc.append(", \"docid\": \"");
-            doc.append(docid);
-            doc.append("\"");
-            Iterator<String> iter = BuildIndex.metadataKeys.iterator();
-            while( iter.hasNext() )
-            {
-                String key = iter.next();
-                if ( jDoc.containsKey(key) )
-                {
-                    doc.append(", \"");
-                    doc.append(key);
-                    doc.append("\": \"");
-                    doc.append( (String)jDoc.get(key) );
-                    doc.append("\"");
-                }
-            }
-            return doc.toString();
-        }
-        catch ( Exception e )
-        {
-            throw new SearchException(e);
-        }
-    }
-    /**
-     * Digest an annotation
-     * @param docid the annotation docid
-     * @return a JSON digest of the annotation body and docid
-     * @throws SearchException 
-     */
-    String digestAnnotation( String docid ) throws SearchException
-    {
-        try
-        {
-            Connection conn = Connector.getConnection();
-            StringBuilder doc = new StringBuilder();
-            String bson = conn.getFromDb( Database.ANNOTATIONS, docid );
-            JSONObject jDoc = (JSONObject)JSONValue.parse( bson );
-            String body = (String)jDoc.get(JSONKeys.BODY);
-            doc.append("{ ");
-            doc.append(", \"docid\": \"");
-            doc.append(docid);
-            doc.append("\"");
-            body = sample( body );
-            doc.append("\"digest\": \"");
-            doc.append( body );
-            doc.append("\"");
-            doc.append( " }");
-            return doc.toString();
-        }
-        catch ( Exception e )
-        {
-            throw new SearchException(e);
-        }
-    }
-    /**
-     * Get a digest of the document
-     * @param docid the document identifier
-     * @param vid an array of matching vids in this docid or null
-     * @param database the database from which to retrieve the document
-     * @return a JSON document being a basic digest of the contents or null
-     */
-    private String getDigest( String docid, String[] vid, String database ) 
-        throws SearchException
-    {
-        if ( database.equals(Database.CORTEX) )
-            return digestCortex( docid, vid );
-        else if ( database.equals(Database.METADATA) )
-            return digestMetadata(docid);
-        else if ( database.equals(Database.ANNOTATIONS) )
-            return digestAnnotation(docid);
-        else
-            return null;
-    }
    /**
      * Search for a query string in the index
      * @param line the query as text
@@ -256,41 +137,6 @@ public class Find {
     public String search( String line, String language, int start ) 
         throws SearchException
     {
-        try
-        {
-            if ( searchers == null )
-                initIndexSearchers();
-            Analyzer analyzer = new StandardAnalyzer();
-            parser = new QueryParser(JSONKeys.CONTENT, analyzer);
-            Query query = parser.parse(line);
-            StringBuilder sb = new StringBuilder();
-            IndexSearcher searcher = searchers.get( language );
-            if ( searcher != null )
-            {
-                TopDocs results = searcher.search(query, 5*HITS_PER_PAGE);
-                ScoreDoc[] hits = results.scoreDocs;
-                MVDHit[] mvdHits = MVDHit.build( searcher, hits );
-                int numTotalHits = mvdHits.length;
-                int end = Math.min(numTotalHits, start+HITS_PER_PAGE);    
-                sb.append("[ ");
-                for (int i = start; i< end; i++) 
-                {
-                    String digest = getDigest( mvdHits[i].docid, 
-                        mvdHits[i].vids, mvdHits[i].database );
-                    if ( sb.length()>2 )
-                        sb.append(",\n");
-                    if ( digest != null )
-                        sb.append( digest );
-                }
-                sb.append(" ]");
-                return sb.toString();
-            }
-            else
-                throw new Exception("Unknown language "+language);
-        }
-        catch ( Exception e )
-        {
-            throw new SearchException(e);
-        }
+        return null;
     }
 }

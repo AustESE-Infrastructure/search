@@ -32,6 +32,7 @@ public class SearchWebApp extends HttpServlet
     static int dbPort = 27017;
     public static int wsPort = 8080;
     static String webRoot = "/var/www";
+    static boolean inited = false;
     Repository repository = Repository.MONGO;
     /**
      * Safely convert a string to an integer
@@ -77,9 +78,9 @@ public class SearchWebApp extends HttpServlet
         {
             String method = req.getMethod();
             String target = req.getRequestURI();
-            if ( !Connector.isOpen() )
+            if ( !inited )
             {
-                Enumeration params = 
+               Enumeration params = 
                     getServletConfig().getInitParameterNames();
                 while (params.hasMoreElements()) 
                 {
@@ -104,7 +105,8 @@ public class SearchWebApp extends HttpServlet
                         host = value;
                 }
                 Connector.init( repository, user, 
-                    password, host, dbPort, wsPort, webRoot );
+                    password, host, "calliope", dbPort, wsPort, webRoot );
+                inited = true;
             }
             target = Utils.pop( target );
             SearchHandler handler;

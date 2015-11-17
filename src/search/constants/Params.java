@@ -13,4 +13,5 @@ public class Params {
     public static String QUERY = "query";
     public static String LANGUAGE = "language";
     public static String START = "start";
+    public static String DOCID = "docid";
 }

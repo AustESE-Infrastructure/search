@@ -129,8 +129,9 @@ public class JettyServer extends AbstractHandler
                 if ( !sane )
                     break;
             }
-            Connector.init( repository, user, 
-                password, host, dbPort, wsPort, "/var/www" );
+            Connector.init( Repository.MONGO, SearchWebApp.user, 
+                SearchWebApp.password, SearchWebApp.host, "calliope", 27017, 
+                SearchWebApp.wsPort, "/var/www" );
         }
         catch ( Exception e )
         {
