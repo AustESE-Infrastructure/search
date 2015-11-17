@@ -76,6 +76,56 @@ public class WordFinder
 		}
         return true;
     }
+    WordSearchState appendToList( WordSearchState list, WordSearchState s )
+    {
+        if ( list != null )
+            list.append(s);
+        else
+            list = s;
+        return list;
+    }
+    WordSearchState pruneList( WordSearchState list, BitSet versions )
+    {
+        WordSearchState mergeables = null;
+        WordSearchState s = list;
+        WordSearchState prev=null;
+        while ( s != null )
+        {
+            if ( isSubsetOf(s.v,versions) )
+            {
+                if ( s == list )
+                    list = s.following;
+                else
+                    prev.following = s.following;
+                s.following = null;
+                mergeables = appendToList( mergeables, s );
+                prev = s;
+            }
+            s = s.following;
+        }
+        s = mergeables;
+        prev = null;
+        while ( s.following != null )
+        {
+            // only delete word states when they are empty or equal
+            if ( s.following.isEmpty() || s.equals(s.following) )
+            {
+                s.merge(s.following);
+                s.following = s.following.following;
+            }
+            else if ( s.isEmpty() )
+            {
+                s.following.merge(s);
+                if ( s == mergeables )
+                    mergeables = s.following;
+                else
+                    prev.following = s.following;
+            }
+            prev = s;
+        }
+        list = appendToList( list, mergeables );
+        return list;
+    }
     /**
      * Navigate an MVD finding all words and stuff them in an index
      * @return the number of word-locations found
@@ -90,39 +140,31 @@ public class WordFinder
         for ( int i=0;i<pairs.size();i++ )
 	    {
 		    Pair temp = pairs.get( i );
-		    // move all elements from active to inactive
-		    if ( inactive == null )
-			    inactive = active;
-		    else
-			    inactive.append( active );
-		    active = null;
-		    // move matching SearchStates into active
+            // move all states from active to inactive
+		    inactive = appendToList( inactive, active );
+            active = null;
+		    // move states matching the pair into active
 		    WordSearchState s = inactive;
 		    while ( s != null )
 		    {
 			    WordSearchState sequential = s.following;
 			    if ( s.v.intersects(temp.versions) )
 			    {
-                    char[] chars = temp.getChars();
-                    if ( chars.length>0 && s.willBreak(chars[0]) )
-                        if ( s.outputWord() )
-                            nWords++;
                     WordSearchState child = s.split(temp.versions);
-				    if ( active == null )
-					    active = child;
-				    else
-					    active.append( child );
+				    active = appendToList( active, child );
 				    if ( s.v.isEmpty() )
                         inactive = inactive.remove( s );
 			    }
 			    s = sequential;
 		    }
+            active = pruneList( active, temp.versions );
 		    // now process each char of the pair
 		    if ( active != null )
 		    {
 			    char[] data = temp.getChars();
 			    for ( int j=0;j<data.length;j++ )
 			    {
+                    // processs the active states
 				    WordSearchState ss = active;
 				    while ( ss != null )
 				    {
@@ -130,24 +172,6 @@ public class WordFinder
                             nWords++;
 					    ss = ss.following;
 				    }
-				    // now prune the active list
-				    WordSearchState s1 = active;
-				    while ( s1 != null )
-                    {
-                        WordSearchState s2 = s1.following;
-                        while ( s2 != null )
-                        {
-                            WordSearchState sequential = s2.following;
-                            if ( isSubsetOf(s1.v,temp.versions) 
-                                && isSubsetOf(s2.v,temp.versions) )
-                            {
-                                s1.merge( s2 );
-                                active.remove( s2 );
-                            }
-                            s2 = sequential;
-                        }
-                        s1 = s1.following;
-                    }
                     this.mvdPosition++;
 			    }
 		    }

@@ -141,6 +141,8 @@ public class WordSearchState
     {
         boolean res = false;
         String w = new String( this.word, 0, this.index );
+        if ( w.equals("Amongs") )
+            System.out.println("Amongs");
         if ( this.hasHyphen )
         {
             if ( !parent.hyphenator.wantsHyphen(w) )
@@ -167,33 +169,26 @@ public class WordSearchState
         return res;
     }
     /**
-     * Will the current token cause a word-break?
-     * @param token the token to test
-     * @return true if this breaks the word
+     * Are we empty of text and ready to die?
+     * @return true if we can be removed else false
      */
-    boolean willBreak( char token )
+    boolean isEmpty()
     {
-        boolean res = false;
-        switch ( state )
+        return this.index==0;
+    }
+    boolean equals( WordSearchState other )
+    {
+        if ( this.index == other.index )
         {
-            case 1:
-                res = token !='-' &&token != '\'' && token != '’'
-                    &&!Character.isLetter(token);
-                break;
-            case 2:
-                res = !Character.isWhitespace(token)&&!Character.isLetter(token);
-                break;
-            case 3: 
-                res = !Character.isLetter(token);
-                break;
-            case 4: 
-                res = !Character.isLetter(token);
-                break;
-            case 5:
-                res = Character.isWhitespace(token)&&!Character.isLetter(token);
-                break;
+            for ( int i=0;i<this.index;i++ )
+            {
+                if ( this.word[i] != other.word[i] )
+                    return false;
+            }
+            return true;
         }
-        return res;
+        else
+            return false;
     }
     /**
      * Receive the incoming character and change state
