@@ -21,12 +21,13 @@ import search.exception.SearchException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Set;
+import java.util.Arrays;
 import calliope.core.database.*;
 import calliope.core.constants.JSONKeys;
 import org.json.simple.*;
 import edu.luc.nmerge.mvd.MVDFile;
 import edu.luc.nmerge.mvd.MVD;
-import edu.luc.nmerge.mvd.Location;
 import edu.luc.nmerge.mvd.Base64;
 import calliope.core.constants.Formats;
 import calliope.core.database.Repository;
@@ -35,6 +36,8 @@ import java.io.ObjectOutputStream;
 import java.io.ObjectInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
+import java.util.BitSet;
+import java.util.Map;
 /**
  * An index for searching MVDs etc.
  * @author desmond
@@ -74,7 +77,16 @@ public class Index implements Serializable {
                 {
                     String mvdText = (String)jObj.get(JSONKeys.BODY);
                     MVD mvd = MVDFile.internalise( mvdText );
-                    int nWords = mvd.indexWords( map, sw, i );
+                    int nWords = indexWords( mvd, map, sw, lang, i );
+                    Set<String> keys = map.keySet();
+                    String[] keyArray = new String[keys.size()];
+                    keys.toArray( keyArray );
+                    Arrays.sort(keyArray);
+                    for ( int j=0;j<keyArray.length;j++ )
+                    {
+                        System.out.print(keyArray[j]);
+                        System.out.print(" ");
+                    }
                     documents.add( docids[i]);
                     log.append("Indexed ");
                     log.append( nWords );
@@ -95,45 +107,80 @@ public class Index implements Serializable {
     /**
      * Find all the locations in documents where the search term occurs
      * @param query the query to search for
-     * @return an array of matches
+     * @return an array of matches or null
      */
     public Match[] find( Query query ) 
     {
-        Match[] res;
+        Match[] res=null;
         ArrayList<Match> hits = new ArrayList<Match>();
         ArrayList locs = map.get(query.terms[0]);
-        for ( int i=0;i<locs.size();i++ )
-            hits.add( new Match((Location)locs.get(i),MatchType.fromQuery(query)) );
-        for ( int i=1;i<query.terms.length;i++ )
+        if ( locs != null )
         {
-            locs = map.get(query.terms[i]);
-            ArrayList<Match> newHits = new ArrayList();
-            for ( int j=0;j<hits.size();j++ )
+            for ( int i=0;i<locs.size();i++ )
+                hits.add( new Match((Location)locs.get(i),query.terms[0],
+                    MatchType.fromQuery(query)) );
+            for ( int i=1;i<query.terms.length;i++ )
             {
-                Match hit = (Match)hits.get(j);
-                for ( int k=0;k<locs.size();k++ )
+                locs = map.get(query.terms[i]);
+                ArrayList<Match> newHits = new ArrayList();
+                for ( int j=0;j<hits.size();j++ )
                 {
-                    Location l = (Location)locs.get(k);
-                    boolean useful = false;
-                    if ( query instanceof LiteralQuery )
-                        useful = hit.testLiteral(l);
-                    else if ( query instanceof BooleanQuery )
-                        useful = hit.testBoolean(l);
-                    if ( useful )
+                    Match hit = (Match)hits.get(j);
+                    for ( int k=0;k<locs.size();k++ )
                     {
-                        hit.addTerm(l,query.terms[i]);
-                        newHits.add(hit);
+                        Location l = (Location)locs.get(k);
+                        boolean useful = false;
+                        if ( query instanceof LiteralQuery )
+                            useful = hit.testLiteral(l);
+                        else if ( query instanceof BooleanQuery )
+                            useful = hit.testBoolean(l);
+                        if ( useful )
+                        {
+                            hit.addTerm(l,query.terms[i]);
+                            newHits.add(hit);
+                        }
                     }
                 }
+                // reduce
+                hits = newHits;
+                if ( hits.size()==0 )
+                    break;
             }
-            // reduce
-            hits = newHits;
-            if ( hits.size()==0 )
-                break;
+            res = new Match[hits.size()];
+            hits.toArray(res);
         }
-        res = new Match[hits.size()];
-        hits.toArray(res);
         return res;
+    }
+        /**
+     * Index all the words of an MVD
+     * @param mvd the mvd to index
+     * @param map the map where to store the words and their locations
+     * @param sw a list of stopwords
+     * @param lang a ISO 2-letter language code
+     * @param docId the document identifier starting at 0
+     * @return the number of indexed words
+     */
+    public int indexWords( MVD mvd, Map<String,ArrayList<Location>> map, 
+        HashSet<String> sw, String lang, int docId )
+    {
+        try
+        {
+            int mvdVersions = mvd.numVersions();
+            if ( mvdVersions>0 )
+            {
+                WordFinder wf = new WordFinder( mvd.getPairs(), map, sw, 
+                    lang, projid, docId );
+                BitSet bs = new BitSet();
+				for ( int i=1;i<=mvdVersions;i++ )
+                    bs.set( i );
+                return wf.find(bs);
+            }
+        }
+        catch ( Exception e )
+        {
+            System.out.println(e.getMessage());
+        }
+        return 0;
     }
     /**
      * Save the index in the database
@@ -203,7 +250,22 @@ public class Index implements Serializable {
             System.out.println(ind.getLog());
             ind.save();
             Index ind2 = Index.load("english/conrad/nostromo");
-            ind2.find( new LiteralQuery("vertical ravines","en") );
+            Match[] res1 = ind2.find( new LiteralQuery("vertical ravines","en") );
+            Match[] res2 = ind2.find( new BooleanQuery("estancias sugar-cane","en") );
+            if ( res1 != null )
+            {
+                for ( int i=0;i<res1.length;i++ )
+                    System.out.println(res1[i]);
+            }
+            else
+                System.out.println("vertical ravines not found");
+            if ( res2 != null )
+            {
+                for ( int i=0;i<res2.length;i++ )
+                    System.out.println(res2[i]);
+            }
+            else
+                System.out.println("estancias suger-cane query not found");
         }
         catch ( Exception e )
         {

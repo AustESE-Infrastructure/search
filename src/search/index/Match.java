@@ -16,7 +16,6 @@
  *  (c) copyright Desmond Schmidt 2015
  */
 package search.index;
-import edu.luc.nmerge.mvd.Location;
 /**
  * a Hit being a full match in some document
  * @author desmond
@@ -38,14 +37,16 @@ public class Match
     /**
      * Create an initial match from a single location
      * @param loc the location
+     * @param word the first term
      * @param type the type of the match
      */
-    public Match( Location loc, MatchType type )
+    public Match( Location loc, String word, MatchType type )
     {
         this.positions = new int[1];
         this.terms = new String[1];
+        this.terms[0] = word;
         this.docId = loc.docId;
-        this.positions[1] = loc.pos;
+        this.positions[0] = loc.pos;
         this.score = 100.0f;
         this.type = type;
     }
@@ -147,5 +148,32 @@ public class Match
         this.positions[this.positions.length-1] = loc.pos;
         this.terms[this.terms.length-1] = word;
         recalcScore();
+    }
+    /**
+     * For debugging
+     * @return a string representation of this match
+     */
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        sb.append( "doc: ");
+        sb.append( docId );
+        sb.append( ", terms: ");
+        for ( int i=0;i<terms.length;i++ )
+        {
+            sb.append(terms[i]);
+            if ( i < terms.length-1)
+                sb.append(",");
+        }
+        sb.append(", positions: ");
+        for ( int i=0;i<terms.length;i++ )
+        {
+            sb.append(positions[i]);
+            if ( i < positions.length-1)
+                sb.append(",");
+        }
+        sb.append(", score: ");
+        sb.append(score);
+        return sb.toString();
     }
 }
