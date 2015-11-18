@@ -141,11 +141,12 @@ public class WordSearchState
     {
         boolean res = false;
         String w = new String( this.word, 0, this.index );
-        if ( w.equals("Amongs") )
-            System.out.println("Amongs");
         if ( this.hasHyphen )
         {
-            if ( !parent.hyphenator.wantsHyphen(w) )
+            // if the word is already in the dictionary in  
+            // hyphented form then it must be right thus
+            if ( !parent.map.containsKey(w) 
+                && !parent.hyphenator.wantsHyphen(w) )
                 w = w.replaceAll("-","");
         }
         if ( !parent.stopwords.contains(w.toLowerCase()) )

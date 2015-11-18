@@ -78,15 +78,15 @@ public class Index implements Serializable {
                     String mvdText = (String)jObj.get(JSONKeys.BODY);
                     MVD mvd = MVDFile.internalise( mvdText );
                     int nWords = indexWords( mvd, map, sw, lang, i );
-                    Set<String> keys = map.keySet();
-                    String[] keyArray = new String[keys.size()];
-                    keys.toArray( keyArray );
-                    Arrays.sort(keyArray);
-                    for ( int j=0;j<keyArray.length;j++ )
-                    {
-                        System.out.print(keyArray[j]);
-                        System.out.print(" ");
-                    }
+//                    Set<String> keys = map.keySet();
+//                    String[] keyArray = new String[keys.size()];
+//                    keys.toArray( keyArray );
+//                    Arrays.sort(keyArray);
+//                    for ( int j=0;j<keyArray.length;j++ )
+//                    {
+//                        System.out.print(keyArray[j]);
+//                        System.out.print(" ");
+//                    }
                     documents.add( docids[i]);
                     log.append("Indexed ");
                     log.append( nWords );
@@ -252,14 +252,14 @@ public class Index implements Serializable {
             Index ind2 = Index.load("english/conrad/nostromo");
             Match[] res1 = ind2.find( new LiteralQuery("vertical ravines","en") );
             Match[] res2 = ind2.find( new BooleanQuery("estancias sugar-cane","en") );
-            if ( res1 != null )
+            if ( res1 != null && res1.length>0 )
             {
                 for ( int i=0;i<res1.length;i++ )
                     System.out.println(res1[i]);
             }
             else
                 System.out.println("vertical ravines not found");
-            if ( res2 != null )
+            if ( res2 != null && res2.length>0 )
             {
                 for ( int i=0;i<res2.length;i++ )
                     System.out.println(res2[i]);

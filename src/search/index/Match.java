@@ -72,7 +72,7 @@ public class Match
      */
     boolean testBoolean( Location loc )
     {
-        return false;
+        return this.docId == loc.docId;
     }
     /**
      * Recalculate the score 
