@@ -252,17 +252,18 @@ public class Index implements Serializable {
             Index ind2 = Index.load("english/conrad/nostromo");
             Match[] res1 = ind2.find( new LiteralQuery("vertical ravines","en") );
             Match[] res2 = ind2.find( new BooleanQuery("estancias sugar-cane","en") );
+            Formatter f = new Formatter(ind);
             if ( res1 != null && res1.length>0 )
             {
-                for ( int i=0;i<res1.length;i++ )
-                    System.out.println(res1[i]);
+                String json = f.matchesToHits( res1 );
+                System.out.println( json );
             }
             else
                 System.out.println("vertical ravines not found");
             if ( res2 != null && res2.length>0 )
             {
-                for ( int i=0;i<res2.length;i++ )
-                    System.out.println(res2[i]);
+                String json = f.matchesToHits( res2 );
+                System.out.println( json );
             }
             else
                 System.out.println("estancias suger-cane query not found");

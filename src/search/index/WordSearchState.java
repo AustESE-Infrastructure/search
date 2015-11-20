@@ -186,7 +186,7 @@ public class WordSearchState
                 if ( this.word[i] != other.word[i] )
                     return false;
             }
-            return true;
+            return this.mvdPos==other.mvdPos;
         }
         else
             return false;

@@ -27,6 +27,7 @@ import edu.luc.nmerge.mvd.Pair;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
+import java.util.Arrays;
 /**
  * Format hits for consumption
  * @author desmond
@@ -119,8 +120,7 @@ public class Formatter
     {
         int state = 0;
         int count = 0;
-        while ( pos<data.length && !Character.isWhitespace(data[pos]) )
-            pos++;
+        int lastWordStart = pos;
         for ( int i=pos;i>=0;i-- )
         {
             switch ( state )
@@ -128,6 +128,8 @@ public class Formatter
                 case 0: // recognising text
                     if ( Character.isWhitespace(data[i]) )
                         state = 1;
+                    else
+                        lastWordStart = i;
                     break;
                 case 1: // recognising whitespace
                     if ( !Character.isWhitespace(data[i]) )
@@ -140,7 +142,7 @@ public class Formatter
                         else
                         {
                             state = 2;
-                            pos = i;
+                            pos = lastWordStart;
                         }
                     }
                     break;
@@ -271,6 +273,8 @@ public class Formatter
                 sb.append("</span>");
             }
         }
+        if ( prev < len )
+            sb.append(context.substring(prev,len-1));
         sb.append("</p>");
         String hitText = dehyphenate( sb );
         JSONObject jObj = new JSONObject();
@@ -304,37 +308,52 @@ public class Formatter
             throw new SearchException( e );
         }
     }
+    /**
+     * Get the versions shared by the match from the MVD raw offsets
+     * @param match the match whose versions are sought
+     * @param mvd the mvd to search in
+     * @return the set of versions shared by the match terms
+     */
     BitSet getMatchVersions( Match match, MVD mvd )
     {
         int pairIndex = 0;
         int start = 0;
         ArrayList<Pair> pairs = mvd.getPairs();
         BitSet bs = new BitSet();
-        Pair p = pairs.get(0);
-        for ( int i=0;i<match.positions.length;i++ )
+        int[] positions = new int[match.positions.length];
+        System.arraycopy( match.positions, 0, positions, 0, positions.length );
+        Arrays.sort( positions );
+        Pair p=null;
+        for ( int i=0;i<positions.length;i++ )
         {
-            int pos = match.positions[i];
+            int pos = positions[i];
             while ( start < pos )
             {
+                p = pairs.get(pairIndex++);
                 int len = p.length();
                 if ( len+start > pos )
                     break;
-                else
+                else if ( len+start==pos )
                 {
-                    p = pairs.get(pairIndex++);
-                    start += len;
+                    p = pairs.get(pairIndex);
+                    break;
                 }
+                else
+                    start += len;
             }
-            if ( i==0 )
-                bs.or( p.versions );
-            else
-                bs.and( p.versions );
+            if ( p != null )
+            {
+                if ( i==0 )
+                    bs.or( p.versions );
+                else
+                    bs.and( p.versions );
+            }
         }
         return bs;
     }
     /**
      * Get the positions of the terms in the first version they share
-     * @param match the match consosting of several terms
+     * @param match the match consisting of several terms
      * @param mvd the mvd they are found in
      * @param version the version to follow
      * @return an array of character positions in that specific version
@@ -342,16 +361,33 @@ public class Formatter
     int[] getMatchPositions( Match match, MVD mvd, int version )
     {
         Pair p;
-        int j = 0;
         int pos = 0;
         int vPos = 0;
         int[] vPositions = new int[match.positions.length];
+        int least = Integer.MAX_VALUE;
+        for ( int i=0;i<vPositions.length;i++ )
+        {
+            if ( match.positions[i]<least )
+                least = match.positions[i];
+            vPositions[i] = -1;
+        }
         ArrayList<Pair> pairs = mvd.getPairs();
         for ( int i=0;i<pairs.size();i++ )
         {
             p = pairs.get(i);
-            if ( pos+p.length() > match.positions[j] )
-                vPositions[j++] = vPos+(match.positions[j]-pos);
+            if ( pos+p.length() >= least )
+            {
+                boolean all = true;
+                for ( int j=0;j<vPositions.length;j++ )
+                {
+                    if ( vPositions[j] == -1 && pos+p.length() > match.positions[j] )
+                        vPositions[j] = vPos+(match.positions[j]-pos);
+                    if ( vPositions[j] == -1 )
+                        all = false;
+                }
+                if ( all )
+                    break;
+            }
             if ( p.versions.nextSetBit(version)==version )
                 vPos += p.length();
             pos += p.length();
@@ -386,8 +422,8 @@ public class Formatter
                         firstVersion );
                     for ( int i=1;i<vPositions.length;i++ )
                     {
-                        int dist = vPositions[i]-vPositions[i-1]
-                            +match.terms[i-1].length();
+                        int dist = vPositions[i]-(vPositions[i-1]
+                            +match.terms[i-1].length());
                         if ( dist > LiteralQuery.MAX_DISTANCE )
                             return false;
                     }

@@ -27,7 +27,7 @@ import java.util.Map;
 import java.util.HashSet;
 
 /**
- * Navigate an MVD looking for words
+ * Navigate through an MVD looking for words
  * @author desmond
  */
 public class WordFinder
