@@ -74,6 +74,35 @@ public class Match
     {
         return this.docId == loc.docId;
     }
+    public boolean equals( Object other )
+    {
+        if ( other instanceof Match )
+        {
+            Match oMatch = (Match) other;
+            if ( oMatch.terms.length == this.terms.length )
+            {
+                for ( int i=0;i<terms.length;i++ )
+                    if ( !this.terms[i].equals(oMatch.terms[i]) )
+                        return false;
+                // check if the terms all overlap
+                for ( int i=0;i<positions.length;i++ )
+                {
+                    int iStart = this.positions[i];
+                    int oStart = oMatch.positions[i];
+                    int iEnd = iStart+this.terms[i].length();
+                    int oEnd = oStart+oMatch.terms[i].length();
+                    if ( iEnd < oStart || iStart > oEnd )
+                        return false;
+                }
+                // all terms overlap and are equal
+                return true;
+            }
+            else
+                return false;
+        }
+        else
+            return false;
+    }
     /**
      * Recalculate the score 
      */

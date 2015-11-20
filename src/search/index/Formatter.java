@@ -58,7 +58,8 @@ public class Formatter
             {
                 if ( verifyMatch(matches[i]) )
                 {
-                    JSONObject json = matchToHit(matches[i]);
+                    boolean suppress = isSuppressed( matches, i );
+                    JSONObject json = matchToHit(matches[i],suppress);
                     hits.add( json );
                 }
             }
@@ -68,6 +69,25 @@ public class Formatter
         {
             throw new FormatException(e);
         }
+    }
+    /**
+     * Do we suppress this match because it is the same as another?
+     * @param index the index of the match to test
+     * @param matches the other matches
+     * @return true if it is in effect identical to another match
+     */
+    boolean isSuppressed( Match[] matches, int index )
+    {
+        for ( int i=0;i<matches.length;i++ )
+        {
+            // otherwise they will suppress eeach other
+            if ( index != i && index > i )  
+            {
+                if ( matches[i].equals(matches[index]) )
+                    return true;
+            }
+        }
+        return false;
     }
     /**
      * Get the document title
@@ -166,10 +186,11 @@ public class Formatter
     /**
      * Convert an abstract hit into a HTML string for display
      * @param match the match to convert
+     * @param suppress: format it to be invisible
      * @return a single hit formatted in basic HTML
      * @throws SearchException 
      */
-    JSONObject matchToHit( Match match ) throws SearchException
+    JSONObject matchToHit( Match match, boolean suppress ) throws SearchException
     {
         String docid = index.getDocid( match.docId );
         MVD mvd = loadMVD(docid);
@@ -178,7 +199,10 @@ public class Formatter
         char[] data = mvd.getVersion(firstVersion);
         int[] vPositions = getMatchPositions( match, mvd, firstVersion );
         StringBuilder sb = new StringBuilder();
-        sb.append("<p class=\"hit\">... ");
+        if ( suppress )
+            sb.append("<p class=\"suppress-hit\">... ");
+        else
+            sb.append("<p class=\"hit\">... ");
         HitSpan hs = null;
         for ( int i=0;i<MAX_DISPLAY_TERMS&&i<vPositions.length;i++ )
         {
