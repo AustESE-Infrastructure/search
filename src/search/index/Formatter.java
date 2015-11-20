@@ -37,8 +37,8 @@ public class Formatter
     Index index;
     String projid;
     HashMap<String,MVD> cache;
-    static final int BACK_CONTEXT_NWORDS = 3;
-    static final int CONTEXT_NWORDS = 100;
+    /** number of words of context per term */
+    static final int MAX_DISPLAY_TERMS = 5;
     public Formatter( Index ind )
     {
         this.index = ind;
@@ -68,89 +68,6 @@ public class Formatter
         {
             throw new FormatException(e);
         }
-    }
-    /**
-     * Move forward a certain number of words
-     * @param data the character data from one version
-     * @param pos the start-position of the first match word
-     * @param nWords the number of words to move forward
-     * @return 
-     */
-    int moveForward( char[] data, int pos, int nWords )
-    {
-        int state = 0;
-        int count = 0;
-        for ( int i=pos;i<data.length;i++ )
-        {
-            switch ( state )
-            {
-                case 0: // recognising text
-                    if ( Character.isWhitespace(data[i]) )
-                        state = 1;
-                    break;
-                case 1: // recognising whitespace
-                    if ( !Character.isWhitespace(data[i]) )
-                    {
-                        if ( count < nWords )
-                        {
-                            count++;
-                            state = 0;
-                        }
-                        else
-                        {
-                            state = 2;
-                            pos = i;
-                        }
-                    }
-                    break;
-            }
-            if ( state == 2 )
-                break;
-        }
-        return pos;
-    }
-    /**
-     * Move back a certain number of words
-     * @param data the character data from one version
-     * @param pos the start-position of the first match word
-     * @param nWords the number of words to move back
-     * @return 
-     */
-    int moveBack( char[] data, int pos, int nWords )
-    {
-        int state = 0;
-        int count = 0;
-        int lastWordStart = pos;
-        for ( int i=pos;i>=0;i-- )
-        {
-            switch ( state )
-            {
-                case 0: // recognising text
-                    if ( Character.isWhitespace(data[i]) )
-                        state = 1;
-                    else
-                        lastWordStart = i;
-                    break;
-                case 1: // recognising whitespace
-                    if ( !Character.isWhitespace(data[i]) )
-                    {
-                        if ( count < nWords )
-                        {
-                            count++;
-                            state = 0;
-                        }
-                        else
-                        {
-                            state = 2;
-                            pos = lastWordStart;
-                        }
-                    }
-                    break;
-            }
-            if ( state == 2 )
-                break;
-        }
-        return pos;
     }
     /**
      * Get the document title
@@ -246,6 +163,12 @@ public class Formatter
         }
         return sb2.toString();
     }
+    /**
+     * Convert an abstract hit into a HTML string for display
+     * @param match the match to convert
+     * @return a single hit formatted in basic HTML
+     * @throws SearchException 
+     */
     JSONObject matchToHit( Match match ) throws SearchException
     {
         String docid = index.getDocid( match.docId );
@@ -254,27 +177,23 @@ public class Formatter
         int firstVersion = bs.nextSetBit(0);
         char[] data = mvd.getVersion(firstVersion);
         int[] vPositions = getMatchPositions( match, mvd, firstVersion );
-        int start = moveBack( data, vPositions[0], BACK_CONTEXT_NWORDS );
-        int end = moveForward( data, start, CONTEXT_NWORDS );
-        String context = new String(data,start,end-start);
         StringBuilder sb = new StringBuilder();
-        sb.append("<p class=\"hit\">");
-        int len = (end-start)+1;
-        int prev = 0;
-        for ( int i=0;i<vPositions.length;i++ )
+        sb.append("<p class=\"hit\">... ");
+        HitSpan hs = null;
+        for ( int i=0;i<MAX_DISPLAY_TERMS&&i<vPositions.length;i++ )
         {
-            int actual = vPositions[i]-start;
-            if ( actual < len )
+            if ( hs == null )
+                hs = new HitSpan( data, match.terms[i], vPositions[i] );
+            else if ( !hs.wants(match.terms[i],vPositions[i]) )
             {
-                sb.append( context.substring(prev,actual) );
-                prev = actual+match.terms[i].length();
-                sb.append("<span class=\"match\">");
-                sb.append(context.substring(actual,prev));
-                sb.append("</span>");
+                sb.append( hs.toString() );
+                hs = new HitSpan( data, match.terms[i], vPositions[i] );
             }
+            else
+                hs.add( match.terms[i], vPositions[i] );
         }
-        if ( prev < len )
-            sb.append(context.substring(prev,len-1));
+        if ( hs != null )
+            sb.append( hs.toString() );
         sb.append("</p>");
         String hitText = dehyphenate( sb );
         JSONObject jObj = new JSONObject();
@@ -282,6 +201,12 @@ public class Formatter
         jObj.put(JSONKeys.TITLE,getTitle(docid));
         return jObj;
     }
+    /**
+     * Get an MVD and save it in a cache in case we need it later
+     * @param docid the document id for the MVD to be used for retrieval
+     * @return an MVD object
+     * @throws SearchException 
+     */
     private MVD loadMVD( String docid ) throws SearchException
     {
         try
