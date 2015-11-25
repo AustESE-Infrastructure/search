@@ -15,7 +15,7 @@
  *  along with Search.  If not, see <http://www.gnu.org/licenses/>.
  *  (c) copyright Desmond Schmidt 2015
  */
-package search.index;
+package search.format;
 
 /**
  * Manage formatting of a span of hits in a match

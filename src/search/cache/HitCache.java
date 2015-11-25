@@ -15,7 +15,7 @@
  *  along with Search.  If not, see <http://www.gnu.org/licenses/>.
  *  (c) copyright Desmond Schmidt 2015
  */
-package search.handler;
+package search.cache;
 
 import java.io.File;
 import java.io.FileInputStream;

@@ -16,6 +16,7 @@
  *  (c) copyright Desmond Schmidt 2015
  */
 package search.index;
+import search.format.Formatter;
 import calliope.core.constants.Database;
 import search.exception.SearchException;
 import java.util.ArrayList;
@@ -151,7 +152,7 @@ public class Index implements Serializable {
         }
         return res;
     }
-        /**
+    /**
      * Index all the words of an MVD
      * @param mvd the mvd to index
      * @param map the map where to store the words and their locations

@@ -23,11 +23,11 @@ package search.index;
 public class Match 
 {
     /** document id in index */
-    int docId;  
+    public int docId;  
     /** the matched terms in order as found */
-    String[] terms;
+    public String[] terms;
     /** positions of terms in doc */
-    int[] positions;
+    public int[] positions;
     /** the score or edit distance of the matched words */
     float score;
     /** number of characters allowed between words for literal matches */

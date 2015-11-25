@@ -15,7 +15,7 @@
  *  along with Search.  If not, see <http://www.gnu.org/licenses/>.
  *  (c) copyright Desmond Schmidt 2015
  */
-package search.index;
+package search.format;
 import calliope.core.constants.Database;
 import org.json.simple.*;
 import calliope.core.database.*;
@@ -28,6 +28,11 @@ import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Arrays;
+import search.index.Index;
+import search.index.LiteralQuery;
+import search.index.Match;
+import search.index.MatchType;
+import search.cache.MVDCache;
 /**
  * Format hits for consumption
  * @author desmond
@@ -36,13 +41,13 @@ public class Formatter
 {
     Index index;
     String projid;
-    HashMap<String,MVD> cache;
+    MVDCache cache;
     /** number of words of context per term */
     static final int MAX_DISPLAY_TERMS = 5;
     public Formatter( Index ind )
     {
         this.index = ind;
-        this.cache = new HashMap<String,MVD>();
+        this.cache = new MVDCache();
     }
     /**
      * Convert a set of matches to an array of JSON formatted summaries
@@ -184,6 +189,18 @@ public class Formatter
         return sb2.toString();
     }
     /**
+     * Convert an int array to an array list
+     * @param arr the int array
+     * @return the array list
+     */
+    ArrayList toArrayList( int[] arr )
+    {
+        ArrayList list = new ArrayList<Integer>();
+        for ( int i=0;i<arr.length;i++ )
+            list.add( arr[i]);
+        return list;
+    }
+    /**
      * Convert an abstract hit into a HTML string for display
      * @param match the match to convert
      * @param suppress: format it to be invisible
@@ -193,11 +210,11 @@ public class Formatter
     JSONObject matchToHit( Match match, boolean suppress ) throws SearchException
     {
         String docid = index.getDocid( match.docId );
-        MVD mvd = loadMVD(docid);
-        BitSet bs = getMatchVersions( match, mvd );
+        MVD mvd = MVDCache.load(docid);
+        BitSet bs = getMatchVersions( match.positions, mvd );
         int firstVersion = bs.nextSetBit(0);
         char[] data = mvd.getVersion(firstVersion);
-        int[] vPositions = getMatchPositions( match, mvd, firstVersion );
+        int[] vPositions = getVPositions( match.positions, mvd, firstVersion );
         StringBuilder sb = new StringBuilder();
         if ( suppress )
             sb.append("<p class=\"suppress-hit\">... ");
@@ -222,60 +239,31 @@ public class Formatter
         String hitText = dehyphenate( sb );
         JSONObject jObj = new JSONObject();
         jObj.put(JSONKeys.BODY,hitText);
+        jObj.put(JSONKeys.DOCID,docid);
+        jObj.put(JSONKeys.POSITIONS,toArrayList(match.positions));
+        jObj.put(JSONKeys.VERSION1,mvd.getVersionId((short)firstVersion));
         jObj.put(JSONKeys.TITLE,getTitle(docid));
         return jObj;
     }
     /**
-     * Get an MVD and save it in a cache in case we need it later
-     * @param docid the document id for the MVD to be used for retrieval
-     * @return an MVD object
-     * @throws SearchException 
-     */
-    private MVD loadMVD( String docid ) throws SearchException
-    {
-        try
-        {
-            if ( cache.containsKey(docid) )
-                return cache.get(docid);
-            else
-            {
-                MVD mvd = null;
-                Connection conn = Connector.getConnection();
-                String bson = conn.getFromDb( Database.CORTEX, docid );
-                if ( bson != null )
-                {
-                    JSONObject jObj = (JSONObject)JSONValue.parse(bson);
-                    String body = (String)jObj.get(JSONKeys.BODY);
-                    mvd = MVDFile.internalise(body);
-                    cache.put( docid, mvd );
-                }
-                return mvd;
-            }
-        }
-        catch ( Exception e )
-        {
-            throw new SearchException( e );
-        }
-    }
-    /**
      * Get the versions shared by the match from the MVD raw offsets
-     * @param match the match whose versions are sought
+     * @param positions the positions of the match
      * @param mvd the mvd to search in
      * @return the set of versions shared by the match terms
      */
-    BitSet getMatchVersions( Match match, MVD mvd )
+    public static BitSet getMatchVersions( int[] positions, MVD mvd )
     {
         int pairIndex = 0;
         int start = 0;
         ArrayList<Pair> pairs = mvd.getPairs();
         BitSet bs = new BitSet();
-        int[] positions = new int[match.positions.length];
-        System.arraycopy( match.positions, 0, positions, 0, positions.length );
-        Arrays.sort( positions );
+        int[] sorted = new int[positions.length];
+        System.arraycopy(positions, 0, sorted, 0, positions.length );
+        Arrays.sort( sorted );
         Pair p=null;
-        for ( int i=0;i<positions.length;i++ )
+        for ( int i=0;i<sorted.length;i++ )
         {
-            int pos = positions[i];
+            int pos = sorted[i];
             while ( start < pos )
             {
                 p = pairs.get(pairIndex++);
@@ -302,22 +290,22 @@ public class Formatter
     }
     /**
      * Get the positions of the terms in the first version they share
-     * @param match the match consisting of several terms
+     * @param mvdPositions an array of global MVD positions
      * @param mvd the mvd they are found in
      * @param version the version to follow
      * @return an array of character positions in that specific version
      */
-    int[] getMatchPositions( Match match, MVD mvd, int version )
+    public static int[] getVPositions( int[] mvdPositions, MVD mvd, int version )
     {
         Pair p;
         int pos = 0;
         int vPos = 0;
-        int[] vPositions = new int[match.positions.length];
+        int[] vPositions = new int[mvdPositions.length];
         int least = Integer.MAX_VALUE;
         for ( int i=0;i<vPositions.length;i++ )
         {
-            if ( match.positions[i]<least )
-                least = match.positions[i];
+            if ( mvdPositions[i]<least )
+                least = mvdPositions[i];
             vPositions[i] = -1;
         }
         ArrayList<Pair> pairs = mvd.getPairs();
@@ -329,8 +317,8 @@ public class Formatter
                 boolean all = true;
                 for ( int j=0;j<vPositions.length;j++ )
                 {
-                    if ( vPositions[j] == -1 && pos+p.length() > match.positions[j] )
-                        vPositions[j] = vPos+(match.positions[j]-pos);
+                    if ( vPositions[j] == -1 && pos+p.length() > mvdPositions[j] )
+                        vPositions[j] = vPos+(mvdPositions[j]-pos);
                     if ( vPositions[j] == -1 )
                         all = false;
                 }
@@ -352,12 +340,12 @@ public class Formatter
     private boolean verifyMatch( Match match ) throws SearchException
     {
         String docid = index.getDocid( match.docId );
-        MVD mvd = loadMVD(docid);
+        MVD mvd = MVDCache.load(docid);
         Pair p;
         ArrayList<Pair> pairs = mvd.getPairs();
         if ( pairs.size()> 0 )
         {
-            BitSet bs = getMatchVersions( match, mvd );
+            BitSet bs = getMatchVersions( match.positions, mvd );
             // check match constraints if any
             if ( !bs.isEmpty() )
             {
@@ -367,7 +355,7 @@ public class Formatter
                 {
                     // terms must be close together
                     int firstVersion = bs.nextSetBit(0);
-                    int[] vPositions = getMatchPositions( match, mvd, 
+                    int[] vPositions = getVPositions( match.positions, mvd, 
                         firstVersion );
                     for ( int i=1;i<vPositions.length;i++ )
                     {
