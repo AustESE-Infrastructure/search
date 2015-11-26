@@ -112,6 +112,10 @@ public class Formatter
                 JSONObject mdObj = (JSONObject)JSONValue.parse(md);
                 if ( mdObj.containsKey(JSONKeys.TITLE) )
                     title = (String)mdObj.get(JSONKeys.TITLE);
+                if ( mdObj.containsKey(JSONKeys.SECTION) )
+                    title += " "+mdObj.get(JSONKeys.SECTION);
+                if ( mdObj.containsKey(JSONKeys.SUBSECTION) )
+                    title += ", "+mdObj.get(JSONKeys.SUBSECTION);
             }
             if ( title == null )
             {

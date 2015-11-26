@@ -155,6 +155,28 @@ public class HitSpan
         return pos;
     }
     /**
+     * Get the length of the term by matching all characters of the term
+     * @param term the term
+     * @param the context to search in
+     * @param actual the offset in context
+     * @return the length which may be greater than term.length()
+     */
+    private int getTermLength( String term, String context, int actual )
+    {
+        int length = 0;
+        int pos = 0;
+        for ( int i=actual;i<context.length();i++ )
+        {
+            char token = context.charAt(i);
+            if ( term.charAt(pos)==token )
+                pos++;
+            length++;
+            if ( pos == term.length() )
+                break;
+        }
+        return length;
+    }
+    /**
      * Convert this match-span to a string
      * @return a String
      */
@@ -179,7 +201,7 @@ public class HitSpan
             if ( actual < len )
             {
                 sb.append( context.substring(prev,actual) );
-                prev = actual+this.terms[i].length();
+                prev = actual+getTermLength(this.terms[i],context,actual);
                 sb.append("<span class=\"match\">");
                 sb.append(context.substring(actual,prev));
                 sb.append("</span>");

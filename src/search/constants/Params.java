@@ -28,4 +28,5 @@ public class Params {
     public final static String DOCID = "docid";
     public final static String SELECTIONS = "selections";
     public final static String VERSION1 = "version1";
+    public final static String FIRSTHIT = "firsthit";
 }

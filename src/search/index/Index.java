@@ -22,8 +22,6 @@ import search.exception.SearchException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Set;
-import java.util.Arrays;
 import calliope.core.database.*;
 import calliope.core.constants.JSONKeys;
 import org.json.simple.*;
@@ -112,7 +110,7 @@ public class Index implements Serializable {
      */
     public Match[] find( Query query ) 
     {
-        Match[] res=null;
+        Match[] res=new Match[0];
         ArrayList<Match> hits = new ArrayList<Match>();
         ArrayList locs = map.get(query.terms[0]);
         if ( locs != null )

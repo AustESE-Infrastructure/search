@@ -28,4 +28,5 @@ public class Service {
  public static final String SETTINGS = "settings";
  public static final String FIND = "find";
  public static final String VOFFSETS = "voffsets";
+ public static final String LIST = "list";
 }

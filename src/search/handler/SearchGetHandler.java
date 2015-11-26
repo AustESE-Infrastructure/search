@@ -20,6 +20,8 @@ package search.handler;
 
 import search.cache.HitCache;
 import calliope.core.Utils;
+import calliope.core.constants.Database;
+import calliope.core.constants.JSONKeys;
 import calliope.core.database.*;
 import search.constants.Service;
 import search.constants.Params;
@@ -43,7 +45,7 @@ import search.index.LiteralQuery;
 public class SearchGetHandler extends SearchHandler
 {
     String language = "english";
-    int hitsPerPage;
+    static int hitsPerPage = 20;
     int firstHit;
     static JSONArray getVPositions( String docid, String selections, String version1 )
         throws SearchException
@@ -95,7 +97,7 @@ public class SearchGetHandler extends SearchHandler
         {
             String first = Utils.first(urn);
             String projid = request.getParameter(Params.DOCID);
-            if ( projid == null || projid.length()==0 )
+            if ( !first.equals(Service.LIST) && (projid == null || projid.length()==0) )
                 throw new Exception("Missing project id for search");
             else if ( first.equals(Service.BUILD) )
             {
@@ -106,6 +108,9 @@ public class SearchGetHandler extends SearchHandler
             }
             else if ( first.equals(Service.FIND) )
             {
+                String firstHitStr = request.getParameter(Params.FIRSTHIT);
+                if ( firstHitStr != null )
+                    firstHit = Integer.parseInt(firstHitStr);
                 String queryStr = request.getParameter(Params.QUERY);
                 if ( queryStr != null && queryStr.length()>0 )
                 {
@@ -124,12 +129,18 @@ public class SearchGetHandler extends SearchHandler
                         // convert hits to JSON format with context
                         Formatter f = new Formatter(ind);
                         hits = f.matchesToHits( matches );
-                        HitCache.store( key, hits );
+                        HitCache.store( hits, key );
                     }
                     JSONArray page = (JSONArray)JSONValue.parse(hits);
-                    JSONArray res = new JSONArray();
+                    JSONObject res = new JSONObject();
+                    JSONArray jHits = new JSONArray();
+                    res.put( "hits", jHits );
+                    res.put( "firstHit", firstHit );
+                    res.put( "totalHits", page.size() );
+                    res.put( "numHits", page.size()-firstHit );
+                    res.put( "hitsPerPage", hitsPerPage );
                     for ( int i=firstHit;i<hitsPerPage&&i<page.size()-firstHit;i++ )
-                        res.add( page.get(i) );
+                        jHits.add( page.get(i) );
                     response.setContentType("application/json");
                     response.getWriter().println( res.toJSONString() );
                 }
@@ -152,6 +163,29 @@ public class SearchGetHandler extends SearchHandler
                 }
                 else
                     throw new Exception("docid, selections or version1 param missing");
+            }
+            else if ( first.equals(Service.LIST) )
+            {
+                Connection conn = Connector.getConnection();
+                JSONArray jArray = new JSONArray();
+                String[] indices = conn.listCollection(Database.INDICES);
+                for ( int i=0;i<indices.length;i++ )
+                {
+                    JSONObject jObj = new JSONObject();
+                    jObj.put(JSONKeys.DOCID, indices[i] );
+                    String md = conn.getFromDb(Database.PROJECTS, indices[i] );
+                    if ( md != null )
+                    {
+                        JSONObject mdObj = (JSONObject)JSONValue.parse(md);
+                        if ( mdObj.containsKey(JSONKeys.AUTHOR) )
+                            jObj.put( JSONKeys.AUTHOR,mdObj.get(JSONKeys.AUTHOR));
+                        if ( mdObj.containsKey(JSONKeys.WORK) )
+                            jObj.put( JSONKeys.WORK,mdObj.get(JSONKeys.WORK));
+                    }
+                    jArray.add( jObj );
+                }
+                response.setContentType("application/json");
+                response.getWriter().println( jArray.toJSONString() );
             }
             else
                 throw new Exception("Unknown GET service "+first);

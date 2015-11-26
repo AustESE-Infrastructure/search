@@ -22,6 +22,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.security.MessageDigest;
 import search.exception.SearchException;
+import calliope.core.Utils;
 
 /**
  * A cache to stored already searched for hits
@@ -34,7 +35,8 @@ public class HitCache
         try
         {
             MessageDigest md = MessageDigest.getInstance("MD5");
-            return new String(md.digest(str.getBytes()));
+            String key = Utils.base64Encode(md.digest(str.getBytes()));
+            return key.replaceAll("/","#");
         }
         catch ( Exception e )
         {
@@ -57,6 +59,7 @@ public class HitCache
         {
             if ( file.exists() )
                 file.delete();
+            file.getParentFile().mkdirs();
             file.createNewFile();
             FileOutputStream fos = new FileOutputStream(file);
             fos.write( json.getBytes("UTF-8") );
@@ -74,8 +77,8 @@ public class HitCache
      */
     private static String getPath( String key )
     {
-        return System.getProperty("java.io.tmpdir")+File.pathSeparator
-            +"search"+File.pathSeparator+key;
+        return System.getProperty("java.io.tmpdir")+File.separator
+            +"search"+File.separator+key;
     }
     /**
      * Test if a file is already in the cache
