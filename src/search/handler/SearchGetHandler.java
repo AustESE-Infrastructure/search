@@ -33,6 +33,7 @@ import search.index.Query;
 import search.index.Match;
 import search.format.Formatter;
 import search.cache.MVDCache;
+import search.index.Progress;
 import edu.luc.nmerge.mvd.MVD;
 import java.util.ArrayList;
 import java.util.BitSet;
@@ -103,6 +104,8 @@ public class SearchGetHandler extends SearchHandler
             {
                 response.setContentType("text/plain");
                 Index ind = new Index(projid);
+                Progress pg = new Progress(response.getWriter());
+                ind.build(pg);
                 ind.save();
                 response.getWriter().println(ind.getLog());
             }
@@ -155,9 +158,11 @@ public class SearchGetHandler extends SearchHandler
                 String selections = request.getParameter(Params.SELECTIONS);
                 // version to fetch
                 String version1 = request.getParameter(Params.VERSION1);
+                System.out.println("Selections="+selections+" version1="+version1);
                 if ( docid != null && selections != null && version1 != null )
                 {
                     JSONArray jArr = getVPositions( docid, selections, version1 );
+                    System.out.println("vpositions="+jArr.toJSONString());
                     response.setContentType("application/json");
                     response.getWriter().println( jArr.toJSONString() );
                 }

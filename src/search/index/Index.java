@@ -49,6 +49,8 @@ public class Index implements Serializable {
     ArrayList<String> documents;
     transient StringBuilder log;
     String projid;
+    String lang;
+    HashSet sw;
     /**
      * Given a project docid find all resources to be indexed
      * @param projid 
@@ -61,12 +63,28 @@ public class Index implements Serializable {
         // 1. find all cortexs that have that projid as prefix
         try
         {
+            map = new HashMap<String,ArrayList<Location>>();
+            lang = Utils.languageFromProjid(projid);
+            sw = Utils.getStopwords(lang);
+        }
+        catch ( Exception e )
+        {
+            throw new SearchException(e);
+        }
+    }
+    /**
+     * Build the index one file at a time
+     * @param pg the prorgess object to record progress
+     * @throws SearchException 
+     */
+    public void build( Progress pg ) throws SearchException
+    {
+        try
+        {
             Connection conn = Connector.getConnection();
             String[] docids = conn.listDocuments(Database.CORTEX,projid+"/.*",
                 JSONKeys.DOCID);
-            map = new HashMap<String,ArrayList<Location>>();
-            String lang = Utils.languageFromProjid(projid);
-            HashSet sw = Utils.getStopwords(lang);
+            pg.total = docids.length;
             for ( int i=0;i<docids.length;i++ )
             {
                 String bson = conn.getFromDb(Database.CORTEX,docids[i] );
@@ -77,15 +95,6 @@ public class Index implements Serializable {
                     String mvdText = (String)jObj.get(JSONKeys.BODY);
                     MVD mvd = MVDFile.internalise( mvdText );
                     int nWords = indexWords( mvd, map, sw, lang, i );
-//                    Set<String> keys = map.keySet();
-//                    String[] keyArray = new String[keys.size()];
-//                    keys.toArray( keyArray );
-//                    Arrays.sort(keyArray);
-//                    for ( int j=0;j<keyArray.length;j++ )
-//                    {
-//                        System.out.print(keyArray[j]);
-//                        System.out.print(" ");
-//                    }
                     documents.add( docids[i]);
                     log.append("Indexed ");
                     log.append( nWords );
@@ -95,7 +104,8 @@ public class Index implements Serializable {
                 }
                 // NB also handle plain text formats
                 else
-                    System.out.println("Warning: ignored format "+format);
+                    log.append("Warning: ignored format "+format+" in "+docids[i]);
+                pg.update( 1 );
             }
         }
         catch ( Exception e )

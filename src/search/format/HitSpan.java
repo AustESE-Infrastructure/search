@@ -210,6 +210,31 @@ public class HitSpan
         if ( prev < len )
             sb.append(context.substring(prev,len-1));
         sb.append(" ... ");
-        return sb.toString();
+        StringBuilder cleaned = new StringBuilder();
+        int state=0;
+        for ( int i=0;i<sb.length();i++ )
+        {
+            char token = sb.charAt(i);
+            switch (state)
+            {
+                case 0: 
+                    if ( Character.isWhitespace(token) )
+                    {
+                        cleaned.append(" ");
+                        state = 1;
+                    }
+                    else
+                        cleaned.append(token);
+                    break;
+                case 1:
+                    if ( !Character.isWhitespace(token) )
+                    {
+                        cleaned.append(token);
+                        state = 0;
+                    }
+                    break;
+            }
+        }
+        return cleaned.toString();
     }
 }

@@ -112,7 +112,7 @@ public class SearchWebApp extends HttpServlet
             SearchHandler handler;
             String service = Utils.first(target);
             if ( service.equals(Service.BUILD)||service.equals(Service.FIND)
-                ||service.equals(Service.VOFFSETS) )
+                ||service.equals(Service.VOFFSETS)||service.equals(Service.LIST) )
             {
                 if ( method.equals("GET") )
                     handler = new SearchGetHandler();

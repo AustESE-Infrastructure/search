@@ -21,13 +21,14 @@ import org.json.simple.*;
 import calliope.core.database.*;
 import search.exception.*;
 import calliope.core.constants.JSONKeys;
-import edu.luc.nmerge.mvd.MVDFile;
 import edu.luc.nmerge.mvd.MVD;
 import edu.luc.nmerge.mvd.Pair;
 import java.util.ArrayList;
 import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Arrays;
+import java.util.Set;
+import java.util.Iterator;
 import search.index.Index;
 import search.index.LiteralQuery;
 import search.index.Match;
@@ -42,12 +43,57 @@ public class Formatter
     Index index;
     String projid;
     MVDCache cache;
+    static int MAX_BODY_LENGTH = 256;
     /** number of words of context per term */
     static final int MAX_DISPLAY_TERMS = 5;
     public Formatter( Index ind )
     {
         this.index = ind;
         this.cache = new MVDCache();
+    }
+    /**
+     * Merge hits from different documents.
+     * @param hits the original per hit list of hits
+     * @return an array based on one set of hits per document
+     */
+    JSONArray mergeHits( JSONArray hits )
+    {
+        HashMap<String,JSONObject> table = new HashMap<String,JSONObject>();
+        for ( int i=0;i<hits.size();i++ )
+        {
+            JSONObject hit = (JSONObject)hits.get(i);
+            String docid = (String)hit.get(JSONKeys.DOCID);
+            if ( !table.containsKey(docid) )
+                table.put( docid, hit );
+            else
+            {
+                JSONObject old = table.get( docid );
+                String oldBody = (String) old.get(JSONKeys.BODY);
+                if ( oldBody.length() < MAX_BODY_LENGTH )
+                {
+                    String newBody = (String)hit.get(JSONKeys.BODY);
+                    if ( newBody.startsWith("<p class=\"hit\">") )
+                        newBody = newBody.substring(17);
+                    if ( oldBody.endsWith("</p>") )
+                        oldBody = oldBody.substring(0,oldBody.length()-4);
+                    oldBody += " ... ";
+                    oldBody += newBody;
+                    old.put(JSONKeys.BODY,oldBody);
+                }
+                JSONArray positions = (JSONArray) old.get(JSONKeys.POSITIONS);
+                JSONArray newPositions = (JSONArray) hit.get(JSONKeys.POSITIONS);
+                for ( int j=0;j<newPositions.size();j++ )
+                    positions.add(newPositions.get(j));
+            }
+        }
+        Set<String> keys = table.keySet();
+        Iterator<String> iter = keys.iterator();
+        JSONArray newDoc = new JSONArray();
+        while ( iter.hasNext() )
+        {
+            newDoc.add( table.get(iter.next()) );
+        }
+        return newDoc;
     }
     /**
      * Convert a set of matches to an array of JSON formatted summaries
@@ -68,6 +114,7 @@ public class Formatter
                     hits.add( json );
                 }
             }
+            hits = mergeHits( hits );
             return hits.toJSONString();
         }
         catch ( Exception e )
@@ -197,9 +244,9 @@ public class Formatter
      * @param arr the int array
      * @return the array list
      */
-    ArrayList toArrayList( int[] arr )
+    JSONArray toArrayList( int[] arr )
     {
-        ArrayList list = new ArrayList<Integer>();
+        JSONArray list = new JSONArray();
         for ( int i=0;i<arr.length;i++ )
             list.add( arr[i]);
         return list;
