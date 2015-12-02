@@ -43,7 +43,7 @@ public class Formatter
     Index index;
     String projid;
     MVDCache cache;
-    static int MAX_BODY_LENGTH = 256;
+    static int MAX_BODY_LENGTH = 512;
     /** number of words of context per term */
     static final int MAX_DISPLAY_TERMS = 5;
     public Formatter( Index ind )
@@ -76,7 +76,6 @@ public class Formatter
                         newBody = newBody.substring(17);
                     if ( oldBody.endsWith("</p>") )
                         oldBody = oldBody.substring(0,oldBody.length()-4);
-                    oldBody += " ... ";
                     oldBody += newBody;
                     old.put(JSONKeys.BODY,oldBody);
                 }
@@ -340,6 +339,23 @@ public class Formatter
         return bs;
     }
     /**
+     * Remove all - values from the array of version positions
+     * @param oldVPositions an array of vPositions and unset (-1) values
+     * @return a new array possibly smaller with no unset elements
+     */
+    private static int[] compactVPositions( int[] oldVPositions )
+    {
+        int count = 0;
+        for ( int i=0;i<oldVPositions.length;i++ )
+            if ( oldVPositions[i]!= -1 )
+                count++;
+        int[] newVPositions = new int[count];
+        for ( int j=0,i=0;i<oldVPositions.length;i++ )
+            if ( oldVPositions[i] != -1 )
+                newVPositions[j++] = oldVPositions[i];
+        return newVPositions;
+    }
+    /**
      * Get the positions of the terms in the first version they share
      * @param mvdPositions an array of global MVD positions
      * @param mvd the mvd they are found in
@@ -351,35 +367,30 @@ public class Formatter
         Pair p;
         int pos = 0;
         int vPos = 0;
+        int j = 0;
         int[] vPositions = new int[mvdPositions.length];
-        int least = Integer.MAX_VALUE;
+        Arrays.sort(mvdPositions);
         for ( int i=0;i<vPositions.length;i++ )
-        {
-            if ( mvdPositions[i]<least )
-                least = mvdPositions[i];
             vPositions[i] = -1;
-        }
         ArrayList<Pair> pairs = mvd.getPairs();
         for ( int i=0;i<pairs.size();i++ )
         {
             p = pairs.get(i);
-            if ( pos+p.length() >= least )
+            while (j<mvdPositions.length && pos+p.length() > mvdPositions[j] )
             {
-                boolean all = true;
-                for ( int j=0;j<vPositions.length;j++ )
-                {
-                    if ( vPositions[j] == -1 && pos+p.length() > mvdPositions[j] )
-                        vPositions[j] = vPos+(mvdPositions[j]-pos);
-                    if ( vPositions[j] == -1 )
-                        all = false;
-                }
-                if ( all )
-                    break;
+                if ( p.versions.nextSetBit(version)==version )
+                    vPositions[j] = vPos+(mvdPositions[j]-pos);
+                else
+                    System.out.println("Skipping position "+mvdPositions[j]);
+                j++;
             }
+            if ( j == mvdPositions.length )
+                break;
             if ( p.versions.nextSetBit(version)==version )
                 vPos += p.length();
             pos += p.length();
         }
+        vPositions = compactVPositions(vPositions);
         return vPositions;
     }
     /**
