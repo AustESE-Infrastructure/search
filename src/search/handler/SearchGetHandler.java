@@ -129,6 +129,29 @@ public class SearchGetHandler extends SearchHandler
                         String lang = search.index.Utils.languageFromProjid(projid);
                         Query q = Query.parse(queryStr,lang);
                         Match[] matches = ind.find( q );
+                        if ( q instanceof LiteralQuery )
+                        {
+                            ArrayList<Match> mList = new ArrayList<Match>();
+                            LiteralQuery lq = (LiteralQuery)q;
+                            for ( int i=0;i<matches.length;i++ )
+                            {
+                                Match m = matches[i];
+                                if ( m.canBeLiteral() )
+                                {
+                                    MVD mvd = MVDCache.load( ind.getDocid(m.docId) );
+                                    int v = mvd.find(lq.original,m.positions[0],m.terms[0]);
+                                    if ( v > 0 )
+                                    {
+                                        m.setFirstVersion(v);
+                                        if ( !mList.contains(m) )
+                                            mList.add( m );
+                                    }
+                                }
+                            }
+                            Match[] mArray = new Match[mList.size()];
+                            mList.toArray(mArray);
+                            matches = mArray;
+                        }
                         // convert hits to JSON format with context
                         Formatter f = new Formatter(ind);
                         hits = f.matchesToHits( matches );

@@ -30,9 +30,7 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.Iterator;
 import search.index.Index;
-import search.index.LiteralQuery;
 import search.index.Match;
-import search.index.MatchType;
 import search.cache.MVDCache;
 /**
  * Format hits for consumption
@@ -262,7 +260,9 @@ public class Formatter
         String docid = index.getDocid( match.docId );
         MVD mvd = MVDCache.load(docid);
         BitSet bs = getMatchVersions( match.positions, mvd );
-        int firstVersion = bs.nextSetBit(0);
+        int firstVersion = match.getFirstVersion();
+        if ( firstVersion==0 )
+            firstVersion = bs.nextSetBit(0);
         char[] data = mvd.getVersion(firstVersion);
         int[] vPositions = getVPositions( match.positions, mvd, firstVersion );
         StringBuilder sb = new StringBuilder();
@@ -310,31 +310,30 @@ public class Formatter
         int[] sorted = new int[positions.length];
         System.arraycopy(positions, 0, sorted, 0, positions.length );
         Arrays.sort( sorted );
-        Pair p=null;
+        Position[] matchPositions = new Position[positions.length];
         for ( int i=0;i<sorted.length;i++ )
         {
             int pos = sorted[i];
             while ( start < pos )
             {
-                p = pairs.get(pairIndex++);
+                Pair p = pairs.get(pairIndex);
                 int len = p.length();
                 if ( len+start > pos )
                     break;
-                else if ( len+start==pos )
-                {
-                    p = pairs.get(pairIndex);
-                    break;
-                }
                 else
                     start += len;
+                pairIndex++;
             }
-            if ( p != null )
+            matchPositions[i] = new Position(pairs,pairIndex,pos-start,pos);
+            if ( i==0 )
+                bs.or( matchPositions[i].getVersions() );
+            else if ( matchPositions[i].overlaps(matchPositions[i-1]) )
             {
-                if ( i==0 )
-                    bs.or( p.versions );
-                else
-                    bs.and( p.versions );
+                matchPositions[i].getVersions().or(matchPositions[i-1].getVersions());
+                bs.and( matchPositions[i].getVersions() );
             }
+            else
+                bs.and( matchPositions[i].getVersions() );
         }
         return bs;
     }
@@ -403,36 +402,8 @@ public class Formatter
     {
         String docid = index.getDocid( match.docId );
         MVD mvd = MVDCache.load(docid);
-        Pair p;
-        ArrayList<Pair> pairs = mvd.getPairs();
-        if ( pairs.size()> 0 )
-        {
-            BitSet bs = getMatchVersions( match.positions, mvd );
-            // check match constraints if any
-            if ( !bs.isEmpty() )
-            {
-                if ( match.type == MatchType.BOOLEAN )
-                    return true;
-                else if ( match.type == MatchType.LITERAL )
-                {
-                    // terms must be close together
-                    int firstVersion = bs.nextSetBit(0);
-                    int[] vPositions = getVPositions( match.positions, mvd, 
-                        firstVersion );
-                    for ( int i=1;i<vPositions.length;i++ )
-                    {
-                        int dist = vPositions[i]-(vPositions[i-1]
-                            +match.terms[i-1].length());
-                        if ( dist > LiteralQuery.MAX_DISTANCE )
-                            return false;
-                    }
-                    return true;
-                }
-                else    // shouldn't happen
-                    return false;
-            }
-        }
-        return false;
+        BitSet bs = getMatchVersions( match.positions, mvd );
+        return !bs.isEmpty();
     }
     public static void main(String[] args )
     {

@@ -34,6 +34,8 @@ public class Match
     static final int literalSlop = 10;
     /** the type of the match derived from query */
     public MatchType type;
+    /** the version to follow or 0 to ignore this */
+    int firstVersion;
     /**
      * Create an initial match from a single location
      * @param loc the location
@@ -51,28 +53,42 @@ public class Match
         this.type = type;
     }
     /**
-     * Test if this location could follow us under literal constraints
+     * Test if this location is in the same document as we are
      * @param loc the location
      * @return true if loc fits after us, else false
      */
-    boolean testLiteral( Location loc )
-    {
-        // d'oh! must be same document
-        if ( loc.docId == this.docId )
-        {
-            return loc.pos <= this.positions[this.terms.length-1]
-                +literalSlop+this.terms[this.terms.length-1].length();
-        }
-        return false;
-    }
-    /**
-     * Test if this location could follow us under boolean (AND) constraints
-     * @param loc the location
-     * @return true if loc fits after us, else false
-     */
-    boolean testBoolean( Location loc )
+    boolean isInSameDocument( Location loc )
     {
         return this.docId == loc.docId;
+    }
+    /**
+     * Check if all terms are in the correct order
+     * @return true if it MAY be literal
+     */
+    public boolean canBeLiteral()
+    {
+        for ( int i=0;i<this.positions.length-1;i++ )
+        {
+            if ( this.positions[i] >= this.positions[i+1] )
+                return false;
+        }
+        return true;
+    }
+    /**
+     * Set the first version to a specific value, not the default
+     * @param firstVersion the version to display the hit in
+     */
+    public void setFirstVersion( int firstVersion )
+    {
+        this.firstVersion = firstVersion;
+    }
+    /**
+     * Get the first version to a specific value, not the default
+     * @return the version to display the hit in or 0
+     */
+    public int getFirstVersion( )
+    {
+        return this.firstVersion;
     }
     public boolean equals( Object other )
     {

@@ -135,18 +135,17 @@ public class Index implements Serializable {
                 for ( int j=0;j<hits.size();j++ )
                 {
                     Match hit = (Match)hits.get(j);
+                    boolean added = false;
                     for ( int k=0;k<locs.size();k++ )
                     {
                         Location l = (Location)locs.get(k);
-                        boolean useful = false;
-                        if ( query instanceof LiteralQuery )
-                            useful = hit.testLiteral(l);
-                        else if ( query instanceof BooleanQuery )
-                            useful = hit.testBoolean(l);
+                        boolean useful = hit.isInSameDocument(l);
                         if ( useful )
                         {
                             hit.addTerm(l,query.terms[i]);
-                            newHits.add(hit);
+                            if ( !added )
+                                newHits.add(hit);
+                            added = true;
                         }
                     }
                 }

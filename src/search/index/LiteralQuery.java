@@ -26,10 +26,12 @@ public class LiteralQuery extends Query
 {
     /** maximum distance between end of one term and start of another */
     public static int MAX_DISTANCE = 10;
+    public String original;
     public LiteralQuery( String quoted, String lang )
     {
         ArrayList<String> termArray = new ArrayList<String>();
-        String[] parts = Utils.stripQuotes(quoted).split(" ");
+        original = Utils.stripQuotes(quoted); 
+        String[] parts = original.split(" ");
         for ( int i=0;i<parts.length;i++ )
         {
             if ( parts[i].length()>0&&!Utils.isStopWord(parts[i],lang) )
