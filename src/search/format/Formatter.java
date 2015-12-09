@@ -33,7 +33,7 @@ import search.index.Index;
 import search.index.Match;
 import search.cache.MVDCache;
 /**
- * Format hits for consumption
+ * Format hits into HTML for consumption
  * @author desmond
  */
 public class Formatter 
@@ -259,29 +259,30 @@ public class Formatter
     {
         String docid = index.getDocid( match.docId );
         MVD mvd = MVDCache.load(docid);
-        BitSet bs = getMatchVersions( match.positions, mvd );
+        BitSet bs = getMatchVersions( match.getPositions(), mvd );
         int firstVersion = match.getFirstVersion();
         if ( firstVersion==0 )
             firstVersion = bs.nextSetBit(0);
         char[] data = mvd.getVersion(firstVersion);
-        int[] vPositions = getVPositions( match.positions, mvd, firstVersion );
         StringBuilder sb = new StringBuilder();
         if ( suppress )
             sb.append("<p class=\"suppress-hit\">... ");
         else
             sb.append("<p class=\"hit\">... ");
         HitSpan hs = null;
-        for ( int i=0;i<MAX_DISPLAY_TERMS&&i<vPositions.length;i++ )
+        for ( int i=0;i<MAX_DISPLAY_TERMS&&i<match.numTerms();i++ )
         {
+            int[] vPositions = getVPositions( match.getTermPositions(i), 
+                mvd, firstVersion );
             if ( hs == null )
-                hs = new HitSpan( data, match.terms[i], vPositions[i] );
-            else if ( !hs.wants(match.terms[i],vPositions[i]) )
+                hs = new HitSpan( data, match.getTerm(i), vPositions[0] );
+            else if ( !hs.wants(match.getTerm(i),vPositions[0]) )
             {
                 sb.append( hs.toString() );
-                hs = new HitSpan( data, match.terms[i], vPositions[i] );
+                hs = new HitSpan( data, match.getTerm(i), vPositions[0] );
             }
             else
-                hs.add( match.terms[i], vPositions[i] );
+                hs.add( match.getTerm(i), vPositions[0] );
         }
         if ( hs != null )
             sb.append( hs.toString() );
@@ -290,7 +291,7 @@ public class Formatter
         JSONObject jObj = new JSONObject();
         jObj.put(JSONKeys.BODY,hitText);
         jObj.put(JSONKeys.DOCID,docid);
-        jObj.put(JSONKeys.POSITIONS,toArrayList(match.positions));
+        jObj.put(JSONKeys.POSITIONS,toArrayList(match.getPositions()));
         jObj.put(JSONKeys.VERSION1,mvd.getVersionId((short)firstVersion));
         jObj.put(JSONKeys.TITLE,getTitle(docid));
         return jObj;
@@ -327,13 +328,12 @@ public class Formatter
             matchPositions[i] = new Position(pairs,pairIndex,pos-start,pos);
             if ( i==0 )
                 bs.or( matchPositions[i].getVersions() );
-            else if ( matchPositions[i].overlaps(matchPositions[i-1]) )
+            else 
             {
-                matchPositions[i].getVersions().or(matchPositions[i-1].getVersions());
+                if ( matchPositions[i].overlaps(matchPositions[i-1]) )
+                    matchPositions[i].getVersions().or(matchPositions[i-1].getVersions());
                 bs.and( matchPositions[i].getVersions() );
             }
-            else
-                bs.and( matchPositions[i].getVersions() );
         }
         return bs;
     }
@@ -402,7 +402,7 @@ public class Formatter
     {
         String docid = index.getDocid( match.docId );
         MVD mvd = MVDCache.load(docid);
-        BitSet bs = getMatchVersions( match.positions, mvd );
+        BitSet bs = getMatchVersions( match.getPositions(), mvd );
         return !bs.isEmpty();
     }
     public static void main(String[] args )

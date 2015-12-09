@@ -21,7 +21,8 @@ import edu.luc.nmerge.mvd.Pair;
 import java.util.ArrayList;
 
 /**
- * Represent the position of a term in an MVD
+ * Represent the full position of a term in an MVD. We have one start 
+ * position in the MVD and potentially multiple end-points
  * @author desmond
  */
 public class Position 
@@ -29,6 +30,13 @@ public class Position
     BitSet versions;
     int start;
     int[] ends;
+    /**
+     * Create a position and compute the versions and end-points
+     * @param pairs an array of pairs from an MVD
+     * @param index the start index of the first pair to look at
+     * @param offset the offset into that pair where our text begins
+     * @param start the mvd start-offset (global, not version-based)
+     */
     Position( ArrayList<Pair> pairs, int index, int offset, int start )
     {
         Pair p = pairs.get(index);
@@ -48,6 +56,8 @@ public class Position
                 char[] data = p.getChars();
                 for ( int i=pOffset;i<data.length;i++ )
                 {
+                    // we follow each version from the start
+                    // until we encounter a non-letter
                     if ( !Character.isLetter(data[i]) )
                     {
                         int j;
@@ -62,6 +72,7 @@ public class Position
                     else
                         end++;
                 }
+                // do we need to load another pair?
                 while ( !finished && pIndex < pairs.size()-1 )
                 {
                     p = pairs.get(++pIndex);
@@ -73,10 +84,15 @@ public class Position
                 }
             }
         }
+        // convert to a simple array
         this.ends = new int[list.size()];
         for ( int i=0;i<list.size();i++ )
             this.ends[i] = list.get(i);
     }
+    /**
+     * Get the versions that share this term
+     * @return a bitset
+     */
     BitSet getVersions()
     {
         return this.versions;

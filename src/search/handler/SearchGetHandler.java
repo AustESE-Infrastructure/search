@@ -139,7 +139,9 @@ public class SearchGetHandler extends SearchHandler
                                 if ( m.canBeLiteral() )
                                 {
                                     MVD mvd = MVDCache.load( ind.getDocid(m.docId) );
-                                    int v = mvd.find(lq.original,m.positions[0],m.terms[0]);
+                                    String firstTerm = m.firstTerm();
+                                    int v = mvd.find(lq.original,
+                                        m.firstPositionOfTerm(firstTerm),firstTerm);
                                     if ( v > 0 )
                                     {
                                         m.setFirstVersion(v);
@@ -234,30 +236,30 @@ public class SearchGetHandler extends SearchHandler
         }
         return sb.toString();
     }
-    public static void main(String[] args )
-    {
-        try
-        {
-            Connector.init( Repository.MONGO, "admin", 
-            "jabberw0cky", "localhost", "calliope", 27017, 8080, "/var/www" );
-            Index ind = new Index( "english/conrad/nostromo" );
-            Match[] res1 = ind.find( new LiteralQuery("vertical ravines","en") );
-            MVD mvd = MVDCache.load("english/conrad/nostromo/1/1");
-            for ( int i=0;i<res1.length;i++ )
-            {
-                BitSet bs = Formatter.getMatchVersions(res1[i].positions, mvd );
-                for (int v = bs.nextSetBit(0); v >= 0; v = bs.nextSetBit(v+1)) 
-                {
-                    JSONArray jArr = getVPositions( 
-                        "english/conrad/nostromo/1/1",
-                        stringifyArray(res1[i].positions), 
-                        mvd.getVersionId((short)v) );
-                    System.out.println(jArr.toJSONString()+" (version "+v+")");
-                }
-            }
-        }
-        catch ( Exception e )
-        {
-        }   
-    }
+//    public static void main(String[] args )
+//    {
+//        try
+//        {
+//            Connector.init( Repository.MONGO, "admin", 
+//            "jabberw0cky", "localhost", "calliope", 27017, 8080, "/var/www" );
+//            Index ind = new Index( "english/conrad/nostromo" );
+//            Match[] res1 = ind.find( new LiteralQuery("vertical ravines","en") );
+//            MVD mvd = MVDCache.load("english/conrad/nostromo/1/1");
+//            for ( int i=0;i<res1.length;i++ )
+//            {
+//                BitSet bs = Formatter.getMatchVersions(res1[i].positions, mvd );
+//                for (int v = bs.nextSetBit(0); v >= 0; v = bs.nextSetBit(v+1)) 
+//                {
+//                    JSONArray jArr = getVPositions( 
+//                        "english/conrad/nostromo/1/1",
+//                        stringifyArray(res1[i].positions), 
+//                        mvd.getVersionId((short)v) );
+//                    System.out.println(jArr.toJSONString()+" (version "+v+")");
+//                }
+//            }
+//        }
+//        catch ( Exception e )
+//        {
+//        }   
+//    }
 }
