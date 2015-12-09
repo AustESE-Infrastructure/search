@@ -27,10 +27,14 @@ public class Progress
     int total;
     int amount;
     int lastValue;
+    int last;
+    int interval;
     PrintWriter pw;
     public Progress( PrintWriter pw )
     {
         this.pw = pw;
+        this.interval = 5;
+        this.last = 0;
     }
     /**
      * Set the total we are working towards
@@ -50,6 +54,10 @@ public class Progress
     public void update( int value ) 
     {
         amount += value;
-        pw.println(amount*100/total);
+        if ( amount - last >= interval || amount == total )
+        {
+            last = amount*100/total;
+            pw.println(last );
+        }
     }
 }

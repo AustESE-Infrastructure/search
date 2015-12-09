@@ -74,7 +74,7 @@ public class Index implements Serializable {
     }
     /**
      * Build the index one file at a time
-     * @param pg the prorgess object to record progress
+     * @param pg the progress object to record progress
      * @throws SearchException 
      */
     public void build( Progress pg ) throws SearchException
@@ -104,7 +104,7 @@ public class Index implements Serializable {
                 }
                 // NB also handle plain text formats
                 else
-                    log.append("Warning: ignored format "+format+" in "+docids[i]);
+                    log.append("Warning: ignored format "+format+" in "+docids[i]+"\n");
                 pg.update( 1 );
             }
         }

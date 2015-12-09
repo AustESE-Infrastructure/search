@@ -107,7 +107,10 @@ public class SearchGetHandler extends SearchHandler
                 Progress pg = new Progress(response.getWriter());
                 ind.build(pg);
                 ind.save();
-                response.getWriter().println(ind.getLog());
+                response.getWriter().flush();
+                String log = ind.getLog();
+                System.out.println(log);
+                response.getWriter().print(log);
             }
             else if ( first.equals(Service.FIND) )
             {
