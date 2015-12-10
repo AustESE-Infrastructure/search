@@ -104,12 +104,9 @@ public class Formatter
             JSONArray hits = new JSONArray();
             for ( int i=0;i<matches.length;i++ )
             {
-                if ( verifyMatch(matches[i]) )
-                {
-                    boolean suppress = isSuppressed( matches, i );
-                    JSONObject json = matchToHit(matches[i],suppress);
-                    hits.add( json );
-                }
+                boolean suppress = isSuppressed( matches, i );
+                JSONObject json = matchToHit(matches[i],suppress);
+                hits.add( json );
             }
             hits = mergeHits( hits );
             return hits.toJSONString();
@@ -259,7 +256,7 @@ public class Formatter
     {
         String docid = index.getDocid( match.docId );
         MVD mvd = MVDCache.load(docid);
-        BitSet bs = getMatchVersions( match.getPositions(), mvd );
+        BitSet bs = match.getVersions( mvd );
         int firstVersion = match.getFirstVersion();
         if ( firstVersion==0 )
             firstVersion = bs.nextSetBit(0);
@@ -275,7 +272,11 @@ public class Formatter
             int[] vPositions = getVPositions( match.getTermPositions(i), 
                 mvd, firstVersion );
             if ( hs == null )
+            {
+                if ( vPositions.length==0 )
+                    System.out.println("0");
                 hs = new HitSpan( data, match.getTerm(i), vPositions[0] );
+            }
             else if ( !hs.wants(match.getTerm(i),vPositions[0]) )
             {
                 sb.append( hs.toString() );
@@ -315,7 +316,7 @@ public class Formatter
         for ( int i=0;i<sorted.length;i++ )
         {
             int pos = sorted[i];
-            while ( start < pos )
+            while ( pairIndex < pairs.size() && start < pos )
             {
                 Pair p = pairs.get(pairIndex);
                 int len = p.length();
@@ -324,6 +325,10 @@ public class Formatter
                 else
                     start += len;
                 pairIndex++;
+            }
+            if ( pairIndex == pairs.size() )
+            {
+                System.out.println("pos="+pos+" start="+start);
             }
             matchPositions[i] = new Position(pairs,pairIndex,pos-start,pos);
             if ( i==0 )
@@ -383,6 +388,8 @@ public class Formatter
                     System.out.println("Skipping position "+mvdPositions[j]);
                 j++;
             }
+//            System.out.println("j="+j+" mvdPositions.length="+mvdPositions.length
+//                +" pos="+pos+" p.length()="+p.length()+" mvdPositions[j]="+mvdPositions[j]);
             if ( j == mvdPositions.length )
                 break;
             if ( p.versions.nextSetBit(version)==version )
@@ -390,20 +397,9 @@ public class Formatter
             pos += p.length();
         }
         vPositions = compactVPositions(vPositions);
+        if ( vPositions.length==0 )
+            System.out.println("0");
         return vPositions;
-    }
-    /**
-     * Check that a match's terms are all in at least 1 version
-     * @param match the match to check
-     * @return true if it was OK else false
-     * @throws SearchException 
-     */
-    private boolean verifyMatch( Match match ) throws SearchException
-    {
-        String docid = index.getDocid( match.docId );
-        MVD mvd = MVDCache.load(docid);
-        BitSet bs = getMatchVersions( match.getPositions(), mvd );
-        return !bs.isEmpty();
     }
     public static void main(String[] args )
     {

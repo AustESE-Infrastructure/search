@@ -143,8 +143,9 @@ public class SearchGetHandler extends SearchHandler
                                 {
                                     MVD mvd = MVDCache.load( ind.getDocid(m.docId) );
                                     String firstTerm = m.firstTerm();
-                                    int v = mvd.find(lq.original,
+                                    BitSet bs = mvd.find(lq.original,
                                         m.firstPositionOfTerm(firstTerm),firstTerm);
+                                    int v = bs.nextSetBit(0);
                                     if ( v > 0 )
                                     {
                                         m.setFirstVersion(v);

@@ -152,6 +152,8 @@ public class WordSearchState
         if ( !parent.stopwords.contains(w.toLowerCase()) )
         {
             Location loc = new Location( this.mvdPos, parent.docId );
+            if ( w.equals("Azuera") )
+                System.out.println("mvdPos="+this.mvdPos+" dodId="+parent.docId);
             ArrayList locs = parent.map.get(w);
             if ( locs == null )
             {

@@ -20,6 +20,8 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.Iterator;
+import java.util.BitSet;
+import edu.luc.nmerge.mvd.MVD;
 /**
  * a Hit being a full match in some document
  * @author desmond
@@ -55,6 +57,7 @@ public class Match
         map.put( word, list );
         this.score = 100.0f;
         this.type = type;
+        this.docId = loc.docId;
     }
     /**
      * Test if this location is in the same document as we are
@@ -218,6 +221,32 @@ public class Match
     public String firstTerm()
     {
         return terms.get(0);
+    }
+    /**
+     * Get the versions shared by the match
+     * @param mvd the mvd we are found in
+     * @return the set of versions the match is found in 
+     */
+    public BitSet getVersions( MVD mvd )
+    {
+        BitSet bs = new BitSet();
+        for ( int i=0;i<terms.size();i++ )
+        {
+            String term = terms.get(i);
+            ArrayList<Integer> list = map.get(terms.get(i));
+            BitSet versions = new BitSet();
+            for ( int j=0;j<list.size();j++ )
+            {
+                int pos = list.get(j);
+                BitSet bs2 = mvd.find( term, pos, term );
+                versions.or( bs2 );
+            }
+            if ( bs.cardinality()==0 )
+                bs.or( versions );
+            else
+                bs.and( versions );
+        }
+        return bs;
     }
     /**
      * Get all positions in a single array
