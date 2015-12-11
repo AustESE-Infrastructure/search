@@ -28,7 +28,7 @@ consisting of percent complete numbers, up to and including 100.
 *docid* - the project identifier. All descendants of this path will have their CORTEX MVD files included in the inde. e.g. english/harpur or italian/capuana/ildrago
 
 ### /search/find
-Finds some text in the indes
+Finds some text in the index.
     
 #### Parameters
 *docid* - the project identifier.
