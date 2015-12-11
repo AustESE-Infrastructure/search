@@ -15,7 +15,7 @@ Finally, install the war into tomcat6:
 For Tomcat7 just replace "tomcat6" with "tomcat7" in the install-search-war.sh script. This script assumes you are using Ubuntu. If that is not true you will have ti change the install path.
 
 Indices are stored in a mongo database called "calliope", in an "indices" collection.
-Both should be created prior to installation. And of course Mongo needs to be installed. The calliope database is also used to store 
+Both should be created prior to installation. And of course Mongo needs to be installed. The calliope database is also used to store the Cortexs and Corcodes, so it has to be there.
 
 ## SERVICES
 Only GET is used.
