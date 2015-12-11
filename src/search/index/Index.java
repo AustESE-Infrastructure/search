@@ -131,8 +131,14 @@ public class Index implements Serializable {
             for ( int i=0;i<locs.size();i++ )
             {
                 Location loc = (Location)locs.get(i);
-                hitMap.put( loc.docId, new Match(loc,query.terms[0],
-                    MatchType.fromQuery(query)) );
+                if ( hitMap.containsKey(loc.docId) )
+                {
+                    Match hit = hitMap.get(loc.docId);
+                    hit.addTerm(loc,query.terms[0]);
+                }
+                else
+                    hitMap.put(loc.docId, new Match(loc,query.terms[0],
+                        MatchType.fromQuery(query)) );
             }
             // add other terms if they occur in the same documents
             for ( int i=1;i<query.terms.length;i++ )

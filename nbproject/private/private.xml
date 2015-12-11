@@ -27,6 +27,7 @@
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/index/BooleanQuery.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/exception/SearchException.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/exception/QueryException.java</file>
+            <file>file:/home/desmond/NetBeansProjects/Search/src/search/format/Position.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/exception/FormatException.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/index/Utils.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/handler/SearchHandler.java</file>
