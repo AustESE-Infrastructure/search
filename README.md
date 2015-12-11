@@ -1,9 +1,8 @@
 INSTALL
 =======
 
-Search is a webapp suitable for tomcat6 (or by slight modification to 
-the install scripts) to tomcat7. It builds a Lucene index of the MVDs,
-annotations and metadata for use within Ecdosis.
+Search is a webapp suitable for tomcat6 or tomcat7. It builds an index of multi-version documents,
+for use within Ecdosis.
 
 Search prints out progress of index-building as a series of lines 
 consisting of percent complete numbers, up to and including 100.
@@ -11,44 +10,61 @@ consisting of percent complete numbers, up to and including 100.
 To rebuild it do a clean rebuild within NetBeans, or produce a fresh 
 jar in dist/Search.jar. Then run the war-building script:
 
-    sudo ./buildwar.sh
+    sudo ./build-war.sh
 
 Finally, install the war into tomcat6:
 
     sudo ./install-war.sh
 
-Search requires write-access to the ecdosis user account, and especially 
-to the index directory as specified in the indexRoot webapp init 
-parameter (see web.xml). For this purpose it is sufficient to add the tomcat6
-user to the group of that directory, e.g.
+For Tomcat7 just replace "tomcat6" with "tomcat7" in the install-search-war.sh script.
 
-    sudo usermod -G desmond tomcat6
-    ls -l /home/ecdosis
+Indices are stored in a mongo database called "calliope", in an "indices" collection.
+Both should be created prior to installation.
 
-The final command should output something like this:
+SERVICES
+========
+Only GET is used.
 
-    drwxrwxr-x 4 ecdosis desmond 4096 Jan 21 09:35 index
+    /search/build -- this builds the index.
 
-which is set up with:
+Parameters
+----------
+*docid* - the project identifier. All descendants of this path will have their CORTEX MVD files included in the inde. e.g. english/harpur or italian/capuana/ildrago
 
-    sudo chmod -R 775 /home/ecdosis/index
+    /search/find -- finds some text in the indes
+    
+Parameters
+----------
+*docid* - the project identifier.
 
-Support for tomcat7 will require some minor adjustments to the build 
-scripts etc., basically by replacing "tomcat6" with "tomcat7" where 
-appropriate.
+*firsthit* - the number of the first hit to display. The page-size is preset to 20.
+
+*query* -- the query string. Only literal and keyword search are currently suported. A literal query is enclosed in double quotation marks.
+
+    /search/voffsets - get the offsets in the underlying plain text of a particular version
+    
+Parameters
+----------
+*docid* -- the *document* identifier. This should indicate a specific CORTEX document such as english/conrad/nostromo/1/1.
+
+*selections* = a sequence of comma-separated integers indicating the MVD global offsets of text whose version-offsets are desired.
+
+*version1* -- the vid of the version whose voffsets are desired.
+
+    /search/list -- list the available indices. THis returns a JSON document
+
+Parameters
+----------
+NONE
 
 INIT PARAMETRERS
 ================
+These are stored in the web.xml file.
+
 repository 
 
-The default is MONGO. Other databases could be supported, and 
+The only admissible value is MONGO. Other databases could be supported, and 
 historically COUCH was.
-
-indexRoot
-
-The absoute path to the root directory to write the indices, one per 
-language in a separate sub-dir. Defaults to /home/ecdosis/index. This is 
-probably the only setting you may need to change.
 
 dbPort
 
