@@ -37,6 +37,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.ByteArrayInputStream;
 import java.util.BitSet;
 import java.util.Map;
+import java.util.Collection;
 /**
  * An index for searching MVDs etc.
  * @author desmond
@@ -114,48 +115,41 @@ public class Index implements Serializable {
         }
     }
     /**
-     * Find all the locations in documents where the search term occurs
+     * Find the locations in documents where all the search terms occur
      * @param query the query to search for
      * @return an array of matches or null
      */
     public Match[] find( Query query ) 
     {
         Match[] res=new Match[0];
-        ArrayList<Match> hits = new ArrayList<Match>();
         ArrayList locs = map.get(query.terms[0]);
         if ( locs != null )
         {
+            // merge into one hit per document
+            HashMap<Integer,Match> hitMap = new HashMap<Integer,Match>();
+            // all hits must contain first term
             for ( int i=0;i<locs.size();i++ )
-                hits.add( new Match((Location)locs.get(i),query.terms[0],
+            {
+                Location loc = (Location)locs.get(i);
+                hitMap.put( loc.docId, new Match(loc,query.terms[0],
                     MatchType.fromQuery(query)) );
+            }
+            // add other terms if they occur in the same documents
             for ( int i=1;i<query.terms.length;i++ )
             {
                 locs = map.get(query.terms[i]);
-                ArrayList<Match> newHits = new ArrayList();
-                for ( int j=0;j<hits.size();j++ )
+                for ( int k=0;k<locs.size();k++ )
                 {
-                    Match hit = (Match)hits.get(j);
-                    boolean added = false;
-                    for ( int k=0;k<locs.size();k++ )
-                    {
-                        Location l = (Location)locs.get(k);
-                        boolean useful = hit.isInSameDocument(l);
-                        if ( useful )
-                        {
-                            hit.addTerm(l,query.terms[i]);
-                            if ( !added )
-                                newHits.add(hit);
-                            added = true;
-                        }
-                    }
+                    Location l = (Location)locs.get(k);
+                    // is this term in an already found document?
+                    Match hit = hitMap.get(l.docId);
+                    if ( hit != null )
+                        hit.addTerm(l,query.terms[i]);
                 }
-                // reduce
-                hits = newHits;
-                if ( hits.size()==0 )
-                    break;
             }
-            res = new Match[hits.size()];
-            hits.toArray(res);
+            Collection<Match> coll = hitMap.values();
+            res = new Match[coll.size()];
+            coll.toArray(res);
         }
         return res;
     }

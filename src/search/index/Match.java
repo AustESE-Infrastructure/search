@@ -60,15 +60,6 @@ public class Match
         this.docId = loc.docId;
     }
     /**
-     * Test if this location is in the same document as we are
-     * @param loc the location
-     * @return true if loc fits after us, else false
-     */
-    boolean isInSameDocument( Location loc )
-    {
-        return this.docId == loc.docId;
-    }
-    /**
      * Check if all terms are in the correct order
      * @return true if it MAY be literal
      */
