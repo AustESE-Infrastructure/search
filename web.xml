@@ -9,7 +9,7 @@
     <description>
      Search index-building back-end for Ecdosis.
     </description>
-    <display-name>Search indexed buildder back-end for Ecdosis</display-name>
+    <display-name>Search indexed builder back-end for Ecdosis</display-name>
 
     <servlet>
       <servlet-name>SearchWebApp</servlet-name>
@@ -19,10 +19,6 @@
     <context-param>
         <param-name>repository</param-name>
         <param-value>MONGO</param-value>
-    </context-param>
-    <context-param>
-        <param-name>indexRoot</param-name>
-        <param-value>/home/ecdosis/index</param-value>
     </context-param>
     <context-param>
         <param-name>dbPort</param-name>

@@ -99,8 +99,6 @@ public class SearchWebApp extends HttpServlet
                         password = value;
                     else if ( param.equals("repository") )
                         repository = getRepository(value,Repository.MONGO);
-                    else if ( param.equals("indexRoot") )
-                        JettyServer.indexRoot = value;
                     else if ( param.equals("host") )
                         host = value;
                 }

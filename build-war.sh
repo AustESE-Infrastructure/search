@@ -22,7 +22,6 @@ if [ ! -d search/WEB-INF/lib ]; then
 fi
 rm -f search/WEB-INF/lib/*.jar
 cp dist/Search.jar search/WEB-INF/lib/
-cp lib/*.jar search/WEB-INF/lib/
 cp web.xml search/WEB-INF/
 jar cf search.war -C search WEB-INF 
 echo "NB: you MUST copy the contents of tomcat-bin to \$tomcat_home/bin"
