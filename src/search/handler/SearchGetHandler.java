@@ -32,7 +32,7 @@ import search.index.Index;
 import search.index.Query;
 import search.index.Match;
 import search.format.Formatter;
-import search.cache.MVDCache;
+import mvd.cache.MVDCache;
 import search.index.Progress;
 import edu.luc.nmerge.mvd.MVD;
 import java.util.ArrayList;
@@ -51,8 +51,16 @@ public class SearchGetHandler extends SearchHandler
     static JSONArray getVPositions( String docid, String selections, String version1 )
         throws SearchException
     {
+        MVD mvd;
         JSONArray jArr = new JSONArray();
-        MVD mvd = MVDCache.load( docid );
+        try
+        {
+            mvd = MVDCache.load( docid );
+        }
+        catch ( Exception e )
+        {
+            throw new SearchException(e);
+        }
         if ( mvd == null )
             throw new SearchException("Failed to find "+docid);
         String[] parts = version1.split("/");

@@ -1,3 +1,4 @@
+SIL.txt
 build/
 dist/
 lucene-4.10.3/
@@ -7,3 +8,4 @@ search.war
 /search/
 stop-words/
 /nbproject/private/
+JavaFastPFOR-master/

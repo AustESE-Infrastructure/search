@@ -31,7 +31,7 @@ import java.util.Set;
 import java.util.Iterator;
 import search.index.Index;
 import search.index.Match;
-import search.cache.MVDCache;
+import mvd.cache.MVDCache;
 /**
  * Format hits into HTML for consumption
  * @author desmond
@@ -255,7 +255,15 @@ public class Formatter
     JSONObject matchToHit( Match match, boolean suppress ) throws SearchException
     {
         String docid = index.getDocid( match.docId );
-        MVD mvd = MVDCache.load(docid);
+        MVD  mvd;
+        try
+        {
+            mvd = MVDCache.load(docid);
+        }
+        catch ( Exception e )
+        {
+            throw new SearchException(e);
+        }
         BitSet bs = match.getVersions( mvd );
         int firstVersion = match.getFirstVersion();
         if ( firstVersion==0 )

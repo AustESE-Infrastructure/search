@@ -46,7 +46,7 @@ public class Index implements Serializable {
     private static final long serialVersionUID = 7526472295622776147L;
     /** list of docids: index = document id */
     ArrayList<String> docs;
-    HashMap<String,ArrayList<Location>> map;
+    HashMap<String,Locations> map;
     ArrayList<String> documents;
     transient StringBuilder log;
     String projid;
@@ -59,12 +59,12 @@ public class Index implements Serializable {
     public Index( String projid ) throws SearchException
     {
         this.projid = projid;
-        documents = new ArrayList<String>();
+        this.documents = new ArrayList<String>();
         this.log = new StringBuilder();
         // 1. find all cortexs that have that projid as prefix
         try
         {
-            map = new HashMap<String,ArrayList<Location>>();
+            map = new HashMap<String,Locations>();
             lang = Utils.languageFromProjid(projid);
             sw = Utils.getStopwords(lang);
         }
@@ -91,17 +91,29 @@ public class Index implements Serializable {
                 String bson = conn.getFromDb(Database.CORTEX,docids[i] );
                 JSONObject jObj = (JSONObject)JSONValue.parse( bson );
                 String format = (String)jObj.get(JSONKeys.FORMAT);
-                if ( format != null && format.equals(Formats.MVD_TEXT) )
+                if ( format != null )
                 {
-                    String mvdText = (String)jObj.get(JSONKeys.BODY);
-                    MVD mvd = MVDFile.internalise( mvdText );
-                    int nWords = indexWords( mvd, map, sw, lang, i );
-                    documents.add( docids[i]);
-                    log.append("Indexed ");
-                    log.append( nWords );
-                    log.append(" words from ");
-                    log.append( docids[i] );
-                    log.append("\n");
+                    int nWords = 0;
+                    String text = (String)jObj.get(JSONKeys.BODY);
+                    if ( format.equals(Formats.MVD_TEXT) )
+                    {
+                        MVD mvd = MVDFile.internalise( text );
+                        nWords = indexMVDWords( mvd, map, sw, lang, i );
+                    }
+                    else if ( format.equals(Formats.TEXT) )
+                    {
+                        TextWordFinder twf = new TextWordFinder( text, map, sw, lang, i );
+                        nWords = twf.find();
+                    }
+                    if ( nWords > 0 )
+                    {
+                        documents.add( docids[i]);
+                        log.append("Indexed ");
+                        log.append( nWords );
+                        log.append(" words from ");
+                        log.append( docids[i] );
+                        log.append("\n");
+                    }
                 }
                 // NB also handle plain text formats
                 else
@@ -122,7 +134,7 @@ public class Index implements Serializable {
     public Match[] find( Query query ) 
     {
         Match[] res=new Match[0];
-        ArrayList locs = map.get(query.terms[0]);
+        Locations locs = map.get(query.terms[0].toLowerCase());
         if ( locs != null )
         {
             // merge into one hit per document
@@ -130,7 +142,7 @@ public class Index implements Serializable {
             // all hits must contain first term
             for ( int i=0;i<locs.size();i++ )
             {
-                Location loc = (Location)locs.get(i);
+                Location loc = locs.location(i);
                 if ( hitMap.containsKey(loc.docId) )
                 {
                     Match hit = hitMap.get(loc.docId);
@@ -143,10 +155,10 @@ public class Index implements Serializable {
             // add other terms if they occur in the same documents
             for ( int i=1;i<query.terms.length;i++ )
             {
-                locs = map.get(query.terms[i]);
+                locs = map.get(query.terms[i].toLowerCase());
                 for ( int k=0;k<locs.size();k++ )
                 {
-                    Location l = (Location)locs.get(k);
+                    Location l = (Location)locs.location(k);
                     // is this term in an already found document?
                     Match hit = hitMap.get(l.docId);
                     if ( hit != null )
@@ -168,7 +180,7 @@ public class Index implements Serializable {
      * @param docId the document identifier starting at 0
      * @return the number of indexed words
      */
-    public int indexWords( MVD mvd, Map<String,ArrayList<Location>> map, 
+    int indexMVDWords( MVD mvd, Map<String,Locations> map, 
         HashSet<String> sw, String lang, int docId )
     {
         try

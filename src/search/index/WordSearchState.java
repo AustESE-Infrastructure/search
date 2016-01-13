@@ -22,7 +22,6 @@ package search.index;
 
 import edu.luc.nmerge.exception.MVDException;
 import java.util.BitSet;
-import java.util.ArrayList;
 /**
  * Based on KMPSearchState we navigate an MVD reading words
  * @author desmond
@@ -137,10 +136,12 @@ public class WordSearchState
      * Store a word in the map
      * @return true if the word had a new location
      */
-    boolean outputWord()
+    boolean storeWord()
     {
         boolean res = false;
         String w = new String( this.word, 0, this.index );
+        // force lowercase
+        w = w.toLowerCase();
         if ( this.hasHyphen )
         {
             // if the word is already in the dictionary in  
@@ -149,20 +150,25 @@ public class WordSearchState
                 && !parent.hyphenator.wantsHyphen(w) )
                 w = w.replaceAll("-","");
         }
-        if ( !parent.stopwords.contains(w.toLowerCase()) )
+        if ( !parent.stopwords.contains(w) )
         {
             Location loc = new Location( this.mvdPos, parent.docId );
-            if ( w.equals("Azuera") )
-                System.out.println("mvdPos="+this.mvdPos+" dodId="+parent.docId);
-            ArrayList locs = parent.map.get(w);
+            Locations locs = parent.map.get(w);
             if ( locs == null )
             {
-                locs = new ArrayList<Location>();
+                locs = new Locations();
                 parent.map.put( w, locs );
             }
             if ( !locs.contains(loc) )
             {
-                locs.add( loc );
+                try
+                {
+                    locs.add( loc );
+                }
+                catch ( Exception e )
+                {
+                    e.printStackTrace(System.out);
+                }
                 res = true;
             }
         }
@@ -219,7 +225,7 @@ public class WordSearchState
                 else if ( token == '’' )
                     state = 4;
                 else if ( !Character.isLetter(token) )
-                    res = outputWord();
+                    res = storeWord();
                 else 
                     this.word[this.index++] = token;
                 break;
@@ -233,7 +239,7 @@ public class WordSearchState
                     state = 1;
                 }
                 else
-                    outputWord();
+                    storeWord();
                 break;
             case 3: // seen a single straight apostrophe
                 if ( Character.isLetter(token) )
@@ -243,7 +249,7 @@ public class WordSearchState
                     state = 1;
                 }
                 else
-                    outputWord();
+                    storeWord();
                 break;
             case 4: // seen a single curly apostrophe
                 if ( Character.isLetter(token) )
@@ -253,7 +259,7 @@ public class WordSearchState
                     state = 1;
                 }
                 else
-                    outputWord();
+                    storeWord();
                 break;
             case 5: // seen letter, hyphen followed by whitespace
                 if ( Character.isLetter(token) )
@@ -264,7 +270,7 @@ public class WordSearchState
                     state = 1;
                 }
                 else if ( !Character.isWhitespace(token) )
-                    outputWord();
+                    storeWord();
                 break;
         }
         return res;

@@ -16,24 +16,29 @@
  *  (c) copyright Desmond Schmidt 2015
  */
 package search.index;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.io.Serializable;
 /**
  * Location in a document where a word occurs
  * @author desmond
  */
-public class Location implements Serializable {
-    static final long serialVersionUID = 5983741889767318458L;
+public class Location implements Comparable<Location> {
     public int pos;
     /** the document id number in the index */
     public int docId;
-    public Location( int pos, int docId )
+    /**
+     * Create a location
+     * @param docId the document identifier
+     * @param pos the position
+     */
+    public Location( int docId, int pos )
     {
         this.docId = docId;
         this.pos = pos;
     }
+    /**
+     * Needed for sorting
+     * @param other the other location to compare to
+     * @return true if they are the same
+     */
     public boolean equals( Object other )
     {
         if ( other instanceof Location )
@@ -45,21 +50,27 @@ public class Location implements Serializable {
             return false;
     }
     /**
-     * Always treat de-serialization as a full-blown constructor, by
-     * validating the final state of the de-serialized object.
+     * To help debugging
+     * @return a string representation of this location
      */
-    private void readObject( ObjectInputStream aInputStream) 
-        throws ClassNotFoundException, IOException 
+    public String toString()
     {
-        aInputStream.defaultReadObject();
+        return docId+","+pos;
     }
     /**
-    * This is the default implementation of writeObject.
-    * Customise if necessary.
-    */
-    private void writeObject( ObjectOutputStream aOutputStream) 
-        throws IOException 
+     * Allow sorting of locations by comparing one location to another
+     * @param other the other location
+     * @return 0 if they are the same, -1 if we are less than other, else 1
+     */
+    public int compareTo( Location other )
     {
-        aOutputStream.defaultWriteObject();
+        if ( this.docId < other.docId
+                || (this.docId==other.docId&&this.pos<other.pos) )
+            return -1;
+        else if ( this.docId > other.docId
+                || (this.docId==other.docId&&this.pos>other.pos) )
+            return 1;
+        else
+            return 0;
     }
 }

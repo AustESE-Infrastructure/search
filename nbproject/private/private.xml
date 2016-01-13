@@ -14,12 +14,13 @@
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/index/Location.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/constants/Service.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/exception/SpellException.java</file>
-            <file>file:/home/desmond/NetBeansProjects/Search/src/search/cache/MVDCache.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/format/HitSpan.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/cache/HitCache.java</file>
+            <file>file:/home/desmond/NetBeansProjects/Search/src/search/index/TextWordFinder.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/index/Progress.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/index/WordSearchState.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/index/Match.java</file>
+            <file>file:/home/desmond/NetBeansProjects/Search/src/search/index/UnsortedIntCompressor.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/handler/SearchGetHandler.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/index/Index.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/index/Find.java</file>
@@ -28,6 +29,7 @@
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/exception/SearchException.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/exception/QueryException.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/format/Position.java</file>
+            <file>file:/home/desmond/NetBeansProjects/Search/src/search/index/Locations.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/exception/FormatException.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/index/Utils.java</file>
             <file>file:/home/desmond/NetBeansProjects/Search/src/search/handler/SearchHandler.java</file>

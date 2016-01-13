@@ -35,13 +35,13 @@ public class WordFinder
     /** local copy of MVDs pairs list - read only */
     ArrayList<Pair> pairs;
     int mvdPosition;
-    Map<String,ArrayList<Location>> map;
+    Map<String,Locations> map;
     int docId;
     String lang;
     String projid;
     HashSet<String> stopwords;
     Hyphenator hyphenator;
-    WordFinder( ArrayList<Pair> pairs, Map<String,ArrayList<Location>> map, 
+    WordFinder( ArrayList<Pair> pairs, Map<String,Locations> map, 
         HashSet<String> sw, String lang, String projid, int docId ) throws SearchException
     {
         try
