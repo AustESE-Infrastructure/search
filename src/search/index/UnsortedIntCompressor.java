@@ -25,6 +25,7 @@ import java.util.Random;
  */
 public class UnsortedIntCompressor 
 {
+    static int NITEMS = 7;
     /**
      * Find out how many bits we'll need to represent this array of ints
      * @param maxValue the maximum positive value
@@ -80,7 +81,7 @@ public class UnsortedIntCompressor
         // 3 is the maximum overrun
         ByteBuffer buf = ByteBuffer.allocate(len+3);
         buf.putInt(numBytes);
-        for ( int i=0,j=0;i<array.length;i++ )
+        for ( int i=0;i<array.length;i++ )
         {
             int value = array[i];
             if ( numBits>24 )
@@ -92,10 +93,15 @@ public class UnsortedIntCompressor
             buf.put((byte)value);
         }
         int resLen = (array.length*numBytes)/4 + 1;
-        if ( (array.length*numBytes)%4 != 0 )
+        int rem = (array.length*numBytes)%4;
+        if ( rem != 0 )
+        {
             resLen++;
+            rem = 4 - rem;  // invert
+        }
         int[] res = new int[resLen];
         res[0] = numBytes;
+        res[0] |= rem<<16;
         for ( int i=1;i<resLen;i++ )
         {
             res[i]= buf.getInt(i*4);
@@ -109,17 +115,11 @@ public class UnsortedIntCompressor
      */
     public static int[] decompress( int[] array ) throws NumberFormatException
     {
-        int numBytes = array[0];
+        int numBytes = array[0] & 0x0000FFFF;
+        int rem = (array[0] & 0xFFFF0000)>>16;
         if ( numBytes < 1 || numBytes > 4 )
             throw new NumberFormatException("numBytes must be between 1 and 4");
-        int len = ((array.length-1)*4)/numBytes;
-        int rem = ((array.length-1)*4)%numBytes;
-        if ( rem == 0 )
-        {
-            int mask = 0xFF<<((numBytes-1)*8);
-            if ( (array[array.length-1]&mask) == 0 )
-                len--;
-        }
+        int len = ((array.length-1)*4)/numBytes - (rem/numBytes);
         ByteBuffer buf = ByteBuffer.allocate((array.length+1)*4);
         for ( int i=1;i<array.length;i++ )
             buf.putInt(array[i]);
@@ -134,9 +134,9 @@ public class UnsortedIntCompressor
     public static void main( String[] args )
     {
         Random r = new Random();
-        int[] uncompressed = new int[100];
-        int limit = (int)Math.pow(2,23);
-        for ( int i=0;i<100;i++ )
+        int[] uncompressed = new int[NITEMS];
+        int limit = (int)Math.pow(2,7);
+        for ( int i=0;i<NITEMS;i++ )
         {
             uncompressed[i] = r.nextInt(limit);
         }
@@ -146,9 +146,9 @@ public class UnsortedIntCompressor
             compressed = UnsortedIntCompressor.compress(uncompressed);
             System.out.println("Length of compressed="+compressed.length);
             int[] decompressed = UnsortedIntCompressor.decompress(compressed);
-            if ( decompressed.length != 100 )
+            if ( decompressed.length != NITEMS )
                 System.out.println("decompression failed. length="+decompressed.length);
-            for ( int i=0;i<100;i++ )
+            for ( int i=0;i<NITEMS;i++ )
             {
                 if ( decompressed[i] != uncompressed[i] )
                     System.out.println("uncompressed ("+uncompressed[i]
@@ -159,6 +159,5 @@ public class UnsortedIntCompressor
         {
             nfe.printStackTrace(System.out);
         }
-        
     }
 }

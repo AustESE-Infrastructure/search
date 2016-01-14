@@ -54,10 +54,12 @@ public class Progress
     public void update( int value ) 
     {
         amount += value;
-        if ( amount - last >= interval || amount == total )
+        int diff = (amount-last)*100/total;
+        if ( diff >= interval || amount == total )
         {
-            last = amount*100/total;
-            pw.println(last );
+            last = amount;
+            pw.println( amount*100/total );
+            pw.flush();
         }
     }
 }

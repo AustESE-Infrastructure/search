@@ -85,7 +85,8 @@ public class Index implements Serializable {
             Connection conn = Connector.getConnection();
             String[] docids = conn.listDocuments(Database.CORTEX,projid+"/.*",
                 JSONKeys.DOCID);
-            pg.total = docids.length;
+            int totalWords = 0;
+            pg.setTotal(docids.length);
             for ( int i=0;i<docids.length;i++ )
             {
                 String bson = conn.getFromDb(Database.CORTEX,docids[i] );
@@ -108,18 +109,22 @@ public class Index implements Serializable {
                     if ( nWords > 0 )
                     {
                         documents.add( docids[i]);
-                        log.append("Indexed ");
-                        log.append( nWords );
-                        log.append(" words from ");
-                        log.append( docids[i] );
-                        log.append("\n");
+//                        log.append("Indexed ");
+//                        log.append( nWords );
+//                        log.append(" words from ");
+//                        log.append( docids[i] );
+//                        log.append("\n");
+                        totalWords += nWords;
                     }
                 }
                 // NB also handle plain text formats
                 else
-                    log.append("Warning: ignored format "+format+" in "+docids[i]+"\n");
+                    log.append("Warning: ignored format "+format+" in "
+                        +docids[i]+"\n");
                 pg.update( 1 );
             }
+            log.append("Indexed "+totalWords+" total words in "+docids.length
+                +" documents\n");
         }
         catch ( Exception e )
         {
@@ -216,6 +221,7 @@ public class Index implements Serializable {
             out.close();
             byte[] data = bos.toByteArray();
             String b64Data = Base64.encodeBytes( data );
+            System.out.println("size of index="+b64Data.length());
             JSONObject jObj = new JSONObject();
             jObj.put( JSONKeys.BODY, b64Data );
             Connection conn = Connector.getConnection();
@@ -235,12 +241,16 @@ public class Index implements Serializable {
         {
             Connection conn = Connector.getConnection();
             String bson = conn.getFromDb( Database.INDICES, projid );
+            System.out.println("about to parse index");
             JSONObject jObj = (JSONObject)JSONValue.parse(bson);
+            System.out.println("About to decode base 64");
             byte[] data = Base64.decode( (String)jObj.get(JSONKeys.BODY) );
             ByteArrayInputStream bis = new ByteArrayInputStream(data);
             ObjectInputStream in = new ObjectInputStream( bis );
+            System.out.println("About to read in index as object");
             Index ind = (Index)in.readObject();
             in.close();
+            System.out.println("About to close connection");
             return ind;
         }
         catch ( Exception e )

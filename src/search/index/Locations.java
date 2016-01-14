@@ -104,7 +104,7 @@ public class Locations implements Serializable
      * Read in as a Locations object
      */
     private void readObject( ObjectInputStream ois) 
-        throws ClassNotFoundException, IOException 
+        throws ClassNotFoundException, IOException, IndexException
     {
         ois.defaultReadObject();
         IntegratedIntCompressor iic = new IntegratedIntCompressor();
@@ -113,6 +113,9 @@ public class Locations implements Serializable
         {
             int[] docids = iic.uncompress(compressedDocids);
             int[] offsets = UnsortedIntCompressor.decompress(compressedOffsets);
+            if ( docids.length != offsets.length )
+                throw new IndexException("offsets length ("+offsets.length
+                    +") not the same as docids ("+docids.length+")");
             // locations should alreayd be sorted
             for ( int i=0;i<docids.length;i++ )
             {
@@ -129,35 +132,41 @@ public class Locations implements Serializable
     /**
     * Write out the compressed Locations index
     */
-    private void writeObject( ObjectOutputStream ous ) 
-        throws IOException, NumberFormatException
+    private void writeObject( ObjectOutputStream ous ) throws IndexException
     {
-        Location[] array = new Location[locs.size()];
-        if ( locs.size()==1 )
+        try
         {
-            // common case
-            compressedDocids = new int[1];
-            compressedOffsets = new int[1];
-            compressedDocids[0] = locs.get(0).docId;
-            compressedOffsets[0] = locs.get(0).pos;
-        }
-        else
-        {
-            locs.toArray(array);
-            Arrays.sort(array); 
-            int[] docids = new int[array.length];
-            int[] offsets = new int[array.length];
-            for ( int i=0;i<array.length;i++ )
+            Location[] array = new Location[locs.size()];
+            if ( locs.size()==1 )
             {
-                Location loc = array[i];
-                docids[i] = loc.docId;
-                offsets[i] = loc.pos;
+                // common case
+                compressedDocids = new int[1];
+                compressedOffsets = new int[1];
+                compressedDocids[0] = locs.get(0).docId;
+                compressedOffsets[0] = locs.get(0).pos;
             }
-            IntegratedIntCompressor iic = new IntegratedIntCompressor();
-            compressedDocids = iic.compress(docids);
-            compressedOffsets = UnsortedIntCompressor.compress(offsets);
+            else
+            {
+                locs.toArray(array);
+                Arrays.sort(array); 
+                int[] docids = new int[array.length];
+                int[] offsets = new int[array.length];
+                for ( int i=0;i<array.length;i++ )
+                {
+                    Location loc = array[i];
+                    docids[i] = loc.docId;
+                    offsets[i] = loc.pos;
+                }
+                IntegratedIntCompressor iic = new IntegratedIntCompressor();
+                compressedDocids = iic.compress(docids);
+                compressedOffsets = UnsortedIntCompressor.compress(offsets);
+            }
+            ous.defaultWriteObject();
         }
-        ous.defaultWriteObject();
+        catch ( Exception e )
+        {
+            throw new IndexException(e);
+        }
     }
     /**
      * Write the object to a string
