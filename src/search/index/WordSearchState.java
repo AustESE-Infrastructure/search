@@ -163,6 +163,8 @@ public class WordSearchState
             {
                 try
                 {
+                    if ( w.equals("egremont") && parent.docId==1482 )
+                        System.out.println("egremont");
                     locs.add( loc );
                 }
                 catch ( Exception e )

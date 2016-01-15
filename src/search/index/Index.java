@@ -45,7 +45,6 @@ import java.util.Collection;
 public class Index implements Serializable {
     private static final long serialVersionUID = 7526472295622776147L;
     /** list of docids: index = document id */
-    ArrayList<String> docs;
     HashMap<String,Locations> map;
     ArrayList<String> documents;
     transient StringBuilder log;
@@ -99,16 +98,19 @@ public class Index implements Serializable {
                     if ( format.equals(Formats.MVD_TEXT) )
                     {
                         MVD mvd = MVDFile.internalise( text );
-                        nWords = indexMVDWords( mvd, map, sw, lang, i );
+                        nWords = indexMVDWords( mvd, map, sw, lang, 
+                            documents.size() );
                     }
                     else if ( format.equals(Formats.TEXT) )
                     {
-                        TextWordFinder twf = new TextWordFinder( text, map, sw, lang, i );
+                        TextWordFinder twf = new TextWordFinder( text, map, 
+                            sw, lang, documents.size() );
                         nWords = twf.find();
                     }
                     if ( nWords > 0 )
                     {
-                        documents.add( docids[i]);
+                        documents.add( docids[i] );
+                        
 //                        log.append("Indexed ");
 //                        log.append( nWords );
 //                        log.append(" words from ");
@@ -148,7 +150,6 @@ public class Index implements Serializable {
             for ( int i=0;i<locs.size();i++ )
             {
                 Location loc = locs.location(i);
-                System.out.println("loc="+loc);
                 if ( hitMap.containsKey(loc.docId) )
                 {
                     Match hit = hitMap.get(loc.docId);
