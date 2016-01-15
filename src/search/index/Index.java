@@ -148,6 +148,7 @@ public class Index implements Serializable {
             for ( int i=0;i<locs.size();i++ )
             {
                 Location loc = locs.location(i);
+                System.out.println("loc="+loc);
                 if ( hitMap.containsKey(loc.docId) )
                 {
                     Match hit = hitMap.get(loc.docId);
@@ -219,6 +220,8 @@ public class Index implements Serializable {
             ObjectOutputStream out = new ObjectOutputStream( bos );
             out.writeObject( this );
             out.close();
+            Locations egremont = map.get("egremont");
+            System.out.println(egremont);
             byte[] data = bos.toByteArray();
             String b64Data = Base64.encodeBytes( data );
             System.out.println("size of index="+b64Data.length());
@@ -241,16 +244,18 @@ public class Index implements Serializable {
         {
             Connection conn = Connector.getConnection();
             String bson = conn.getFromDb( Database.INDICES, projid );
-            System.out.println("about to parse index");
+            //System.out.println("about to parse index");
             JSONObject jObj = (JSONObject)JSONValue.parse(bson);
-            System.out.println("About to decode base 64");
+            //System.out.println("About to decode base 64");
             byte[] data = Base64.decode( (String)jObj.get(JSONKeys.BODY) );
             ByteArrayInputStream bis = new ByteArrayInputStream(data);
             ObjectInputStream in = new ObjectInputStream( bis );
-            System.out.println("About to read in index as object");
+            // System.out.println("About to read in index as object");
             Index ind = (Index)in.readObject();
             in.close();
-            System.out.println("About to close connection");
+            Locations egremont = ind.map.get("egremont");
+            System.out.println(egremont);
+            //System.out.println("About to close connection");
             return ind;
         }
         catch ( Exception e )

@@ -150,60 +150,65 @@ public class Match
      */
     private void recalcScore()
     {
-        int[] distances = new int[terms.size()-1];
-        for ( int i=0;i<terms.size()-1;i++ )
+        if ( terms.size()== 1 )
+            this.score = 100f;
+        else
         {
-            int dist = Integer.MAX_VALUE;
-            // find the closest term
-            for ( int j=0;j<terms.size();j++ )
+            int[] distances = new int[terms.size()-1];
+            for ( int i=0;i<terms.size()-1;i++ )
             {
-                if ( i != j )
+                int dist = Integer.MAX_VALUE;
+                // find the closest term
+                for ( int j=0;j<terms.size();j++ )
                 {
-                    ArrayList<Integer> listi = map.get(terms.get(i));
-                    ArrayList<Integer> listj = map.get(terms.get(j));
-                    // this costs O(N log N) for each term
-                    for ( int k=0;k<listi.size();k++ )
+                    if ( i != j )
                     {
-                        int val1 = listi.get(k);
-                        int index = getIndex(listj,val1);
-                        int val2;
-                        if ( index!=-1 )
-                            val2 = listj.get(index);
-                        else
+                        ArrayList<Integer> listi = map.get(terms.get(i));
+                        ArrayList<Integer> listj = map.get(terms.get(j));
+                        // this costs O(N log N) for each term
+                        for ( int k=0;k<listi.size();k++ )
                         {
-                            index = 0;
-                            val2 = listj.get(0);
+                            int val1 = listi.get(k);
+                            int index = getIndex(listj,val1);
+                            int val2;
+                            if ( index!=-1 )
+                                val2 = listj.get(index);
+                            else
+                            {
+                                index = 0;
+                                val2 = listj.get(0);
+                            }
+                            int diff = Math.abs(val1-val2);
+                            if ( index != 0 && index != listj.size()-1 )
+                            {
+                                int index2 = index+1;
+                                int diff2 = Math.abs(val1-listj.get(index2));
+                                if ( diff2 < diff )
+                                    diff = diff2;
+                            }
+                            if ( diff < dist )
+                                dist = diff;
                         }
-                        int diff = Math.abs(val1-val2);
-                        if ( index != 0 && index != listj.size()-1 )
-                        {
-                            int index2 = index+1;
-                            int diff2 = Math.abs(val1-listj.get(index2));
-                            if ( diff2 < diff )
-                                diff = diff2;
-                        }
-                        if ( diff < dist )
-                            dist = diff;
                     }
                 }
+                // so now dist is the minimum distance between terms for term i
+                distances[i] = dist;
             }
-            // so now dist is the minimum distance between terms for term i
-            distances[i] = dist;
+            // compute total distance between matches
+            int totalDist = 0;
+            for ( int i=0;i<distances.length;i++ )
+                totalDist += distances[i];
+            // compute total match range
+            ArrayList<Integer> list1 = map.get(terms.get(0));
+            ArrayList<Integer> list2 = map.get(terms.get(terms.size()-1));
+            int minPos = list1.get(0);
+            int maxEnd = list2.get(list2.size()-1);
+            // score is a 100 less the fraction of the distance between terms  
+            // over the total distance covered by the terms. So for 0 distance  
+            // score will be 100 and for maximally separated terms the score will 
+            // be close to 0.
+            this.score = 100.0f-totalDist*100/(maxEnd-minPos);
         }
-        // compute total distance between matches
-        int totalDist = 0;
-        for ( int i=0;i<distances.length;i++ )
-            totalDist += distances[i];
-        // compute total match range
-        ArrayList<Integer> list1 = map.get(terms.get(0));
-        ArrayList<Integer> list2 = map.get(terms.get(terms.size()-1));
-        int minPos = list1.get(0);
-        int maxEnd = list2.get(list2.size()-1);
-        // score is a 100 less the fraction of the distance between terms  
-        // over the total distance covered by the terms. So for 0 distance  
-        // score will be 100 and for maximally separated terms the score will 
-        // be close to 0.
-        this.score = 100.0f-totalDist*100/(maxEnd-minPos);
     }
     /**
      * Get the first term

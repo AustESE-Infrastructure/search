@@ -152,7 +152,7 @@ public class WordSearchState
         }
         if ( !parent.stopwords.contains(w) )
         {
-            Location loc = new Location( this.mvdPos, parent.docId );
+            Location loc = new Location( parent.docId, this.mvdPos );
             Locations locs = parent.map.get(w);
             if ( locs == null )
             {

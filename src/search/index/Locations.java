@@ -208,6 +208,16 @@ public class Locations implements Serializable
             throw new SearchException(e);
         }
     }
+    public String toString()
+    {
+        StringBuilder sb = new StringBuilder();
+        for ( int i=0;i<locs.size();i++ )
+        {
+            sb.append(locs.get(i).toString());
+            sb.append( " ");
+        }
+        return sb.toString();
+    }
     public static void main(String[] args )
     {
         // 1. generate a list of 100 random numbers from 1-100

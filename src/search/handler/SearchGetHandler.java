@@ -55,7 +55,7 @@ public class SearchGetHandler extends SearchHandler
         JSONArray jArr = new JSONArray();
         try
         {
-            mvd = MVDCache.load( docid );
+            mvd = MVDCache.load( Database.CORTEX, docid );
         }
         catch ( Exception e )
         {
@@ -149,7 +149,8 @@ public class SearchGetHandler extends SearchHandler
                                 Match m = matches[i];
                                 if ( m.canBeLiteral() )
                                 {
-                                    MVD mvd = MVDCache.load( ind.getDocid(m.docId) );
+                                    MVD mvd = MVDCache.load( Database.CORTEX, 
+                                        ind.getDocid(m.docId) );
                                     String firstTerm = m.firstTerm();
                                     BitSet bs = mvd.find(lq.original,
                                         m.firstPositionOfTerm(firstTerm),firstTerm);

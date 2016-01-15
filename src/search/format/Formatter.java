@@ -255,10 +255,10 @@ public class Formatter
     JSONObject matchToHit( Match match, boolean suppress ) throws SearchException
     {
         String docid = index.getDocid( match.docId );
-        MVD  mvd;
+        MVD mvd;
         try
         {
-            mvd = MVDCache.load(docid);
+            mvd = MVDCache.load(Database.CORTEX,docid);
         }
         catch ( Exception e )
         {
@@ -268,6 +268,10 @@ public class Formatter
         int firstVersion = match.getFirstVersion();
         if ( firstVersion==0 )
             firstVersion = bs.nextSetBit(0);
+        if ( firstVersion==-1 )
+        {
+            System.out.println("docid="+docid+" versions="+bs.toString());
+        }
         char[] data = mvd.getVersion(firstVersion);
         StringBuilder sb = new StringBuilder();
         if ( suppress )
