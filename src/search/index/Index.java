@@ -125,7 +125,7 @@ public class Index implements Serializable {
                         +docids[i]+"\n");
                 pg.update( 1 );
             }
-            log.append("Indexed "+totalWords+" total words in "+docids.length
+            log.append("Indexed "+totalWords+" total words in "+documents.size()
                 +" documents\n");
         }
         catch ( Exception e )
@@ -221,11 +221,8 @@ public class Index implements Serializable {
             ObjectOutputStream out = new ObjectOutputStream( bos );
             out.writeObject( this );
             out.close();
-            Locations egremont = map.get("egremont");
-            System.out.println(egremont);
             byte[] data = bos.toByteArray();
             String b64Data = Base64.encodeBytes( data );
-            System.out.println("size of index="+b64Data.length());
             JSONObject jObj = new JSONObject();
             jObj.put( JSONKeys.BODY, b64Data );
             Connection conn = Connector.getConnection();
@@ -254,8 +251,6 @@ public class Index implements Serializable {
             // System.out.println("About to read in index as object");
             Index ind = (Index)in.readObject();
             in.close();
-            Locations egremont = ind.map.get("egremont");
-            System.out.println(egremont);
             //System.out.println("About to close connection");
             return ind;
         }

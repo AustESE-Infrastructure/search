@@ -38,6 +38,7 @@ import edu.luc.nmerge.mvd.MVD;
 import java.util.ArrayList;
 import java.util.BitSet;
 import org.json.simple.*;
+import mvd.cache.CacheEntry;
 import search.index.LiteralQuery;
 /**
  * Get a Search document from the database
@@ -48,21 +49,8 @@ public class SearchGetHandler extends SearchHandler
     String language = "english";
     static int hitsPerPage = 20;
     int firstHit;
-    static JSONArray getVPositions( String docid, String selections, String version1 )
-        throws SearchException
+    private static String getGroup( String version1 )
     {
-        MVD mvd;
-        JSONArray jArr = new JSONArray();
-        try
-        {
-            mvd = MVDCache.load( Database.CORTEX, docid );
-        }
-        catch ( Exception e )
-        {
-            throw new SearchException(e);
-        }
-        if ( mvd == null )
-            throw new SearchException("Failed to find "+docid);
         String[] parts = version1.split("/");
         String group = "";
         if ( parts.length > 0 )
@@ -75,27 +63,79 @@ public class SearchGetHandler extends SearchHandler
             }
             group = sb.toString();
         }
-        String[] mvdOffsets = selections.split(",");
+        return group;
+    }
+    private static String getShortName( String version1 )
+    {
+        int index = version1.lastIndexOf("/");
+        if ( index == -1 )
+            return version1;
+        else
+            return version1.substring(index+1);
+    }
+    /**
+     * convert selections to an array of positions
+     * @param selections a comma-delimited list of mvd positions
+     * @return an int array of positions derived therefrom
+     */
+    private static int[] getPositions( String selections )
+    {
+        int[] positions;
+        String[] parts = selections.split(",");
         ArrayList<Integer> list = new ArrayList<Integer>();
-        for ( int i=0;i<mvdOffsets.length;i++ )
+        for ( int i=0;i<parts.length;i++ )
         {
-            if ( mvdOffsets[i].length()>0 )
-                list.add( Integer.parseInt(mvdOffsets[i]) );
+            if ( parts[i].length()>0 )
+                list.add( Integer.parseInt(parts[i]) );
         }
-        int[] positions = new int[list.size()];
+        positions = new int[list.size()];
         for ( int i=0;i<list.size();i++ )
             positions[i] = list.get(i);
-        int vid = mvd.getVersionByNameAndGroup( 
-            parts[parts.length-1], group );
-        if ( vid != 0 )
+        return positions;
+    }
+    /**
+     * Get the version positions in an MVD
+     * @param docid the document identifier
+     * @param selections the selections or MVD positions as a comma-delimited string
+     * @param version1 the first version
+     * @return a JSONArray of version-positions
+     * @throws SearchException 
+     */
+    static JSONArray getVPositions( String docid, String selections, 
+        String version1 ) throws SearchException
+    {
+        MVD mvd;
+        JSONArray jArr = new JSONArray();
+        int[] positions = getPositions(selections);
+        try
         {
-            int[] vPositions = Formatter.getVPositions( positions, mvd, vid );
-            for ( int i=0;i<vPositions.length;i++ )
-                jArr.add( vPositions[i] );
+            CacheEntry ce = MVDCache.load( Database.CORTEX, docid );
+            if ( ce.mvd != null )
+            {
+                String group = getGroup(version1);
+                String shortName = getShortName( version1 );
+                int vid = ce.mvd.getVersionByNameAndGroup( shortName, group );
+                if ( vid != 0 )
+                {
+                    int[] vPositions = Formatter.getVPositions( positions, 
+                        ce.mvd, vid );
+                    for ( int i=0;i<vPositions.length;i++ )
+                        jArr.add( vPositions[i] );
+                }
+                else
+                    throw new SearchException("version "+version1+" of "
+                        +docid+" not found");
+            }
+            else
+            {
+                for ( int i=0;i<positions.length;i++ )
+                    jArr.add( positions[i] );
+            }
         }
-        else
-            throw new SearchException("version "+version1+" of "
-                +docid+" not found");
+        catch ( Exception e )
+        {
+            throw new SearchException(e);
+        }
         return jArr;
     }
     public void handle(HttpServletRequest request,
@@ -149,11 +189,19 @@ public class SearchGetHandler extends SearchHandler
                                 Match m = matches[i];
                                 if ( m.canBeLiteral() )
                                 {
-                                    MVD mvd = MVDCache.load( Database.CORTEX, 
+                                    CacheEntry ce = MVDCache.load( Database.CORTEX, 
                                         ind.getDocid(m.docId) );
                                     String firstTerm = m.firstTerm();
-                                    BitSet bs = mvd.find(lq.original,
-                                        m.firstPositionOfTerm(firstTerm),firstTerm);
+                                    BitSet bs;
+                                    if ( ce.mvd != null )
+                                        bs = ce.mvd.find(lq.original,
+                                            m.firstPositionOfTerm(firstTerm),
+                                            firstTerm);
+                                    else
+                                    {
+                                        bs = new BitSet();
+                                        bs.set(1);
+                                    }
                                     int v = bs.nextSetBit(0);
                                     if ( v > 0 )
                                     {
@@ -196,11 +244,11 @@ public class SearchGetHandler extends SearchHandler
                 String selections = request.getParameter(Params.SELECTIONS);
                 // version to fetch
                 String version1 = request.getParameter(Params.VERSION1);
-                System.out.println("Selections="+selections+" version1="+version1);
+                //System.out.println("Selections="+selections+" version1="+version1);
                 if ( docid != null && selections != null && version1 != null )
                 {
                     JSONArray jArr = getVPositions( docid, selections, version1 );
-                    System.out.println("vpositions="+jArr.toJSONString());
+                    //System.out.println("vpositions="+jArr.toJSONString());
                     response.setContentType("application/json");
                     response.getWriter().println( jArr.toJSONString() );
                 }

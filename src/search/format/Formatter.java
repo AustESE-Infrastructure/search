@@ -32,6 +32,7 @@ import java.util.Iterator;
 import search.index.Index;
 import search.index.Match;
 import mvd.cache.MVDCache;
+import mvd.cache.CacheEntry;
 /**
  * Format hits into HTML for consumption
  * @author desmond
@@ -254,60 +255,74 @@ public class Formatter
      */
     JSONObject matchToHit( Match match, boolean suppress ) throws SearchException
     {
+        BitSet bs;
+        char[] data=null;
         String docid = index.getDocid( match.docId );
-        MVD mvd;
         try
         {
-            mvd = MVDCache.load(Database.CORTEX,docid);
+            int firstVersion;
+            CacheEntry ce = MVDCache.load(Database.CORTEX,docid);
+            if ( ce.mvd != null )
+            {
+                bs = match.getVersions( ce.mvd );
+                firstVersion = match.getFirstVersion();
+                if ( firstVersion==0 )
+                    firstVersion = bs.nextSetBit(0);    
+                if ( firstVersion == -1 )
+                    throw new Exception("No versions for match");
+                data = ce.mvd.getVersion(firstVersion);
+            }
+            else if ( ce.text != null )
+            {
+                bs = new BitSet();
+                bs.set(1);
+                data = ce.text.toCharArray();
+                firstVersion = 1;
+            }
+            else
+                throw new Exception("Failed to load doc "+match.docId);
+            StringBuilder sb = new StringBuilder();
+            if ( suppress )
+                sb.append("<p class=\"suppress-hit\">... ");
+            else
+                sb.append("<p class=\"hit\">... ");
+            HitSpan hs = null;
+            for ( int i=0;i<MAX_DISPLAY_TERMS&&i<match.numTerms();i++ )
+            {
+                int[] vPositions = null;
+                if ( ce.mvd != null )
+                    vPositions = getVPositions( match.getTermPositions(i), 
+                        ce.mvd, firstVersion );
+                else    // mvdPositions == vPositions
+                    vPositions = match.getTermPositions(i);
+                if ( hs == null )
+                {
+                    hs = new HitSpan( data, match.getTerm(i), vPositions[0] );
+                }
+                else if ( !hs.wants(match.getTerm(i),vPositions[0]) )
+                {
+                    sb.append( hs.toString() );
+                    hs = new HitSpan( data, match.getTerm(i), vPositions[0] );
+                }
+                else
+                    hs.add( match.getTerm(i), vPositions[0] );
+            }
+            if ( hs != null )
+                sb.append( hs.toString() );
+            sb.append("</p>");
+            String hitText = dehyphenate( sb );
+            JSONObject jObj = new JSONObject();
+            jObj.put(JSONKeys.BODY,hitText);
+            jObj.put(JSONKeys.DOCID,docid);
+            jObj.put(JSONKeys.POSITIONS,toArrayList(match.getPositions()));
+            jObj.put(JSONKeys.VERSION1,ce.firstVersion);
+            jObj.put(JSONKeys.TITLE,getTitle(docid));
+            return jObj;
         }
         catch ( Exception e )
         {
             throw new SearchException(e);
         }
-        BitSet bs = match.getVersions( mvd );
-        int firstVersion = match.getFirstVersion();
-        if ( firstVersion==0 )
-            firstVersion = bs.nextSetBit(0);
-        if ( firstVersion==-1 )
-        {
-            System.out.println("docid="+docid+" versions="+bs.toString());
-        }
-        char[] data = mvd.getVersion(firstVersion);
-        StringBuilder sb = new StringBuilder();
-        if ( suppress )
-            sb.append("<p class=\"suppress-hit\">... ");
-        else
-            sb.append("<p class=\"hit\">... ");
-        HitSpan hs = null;
-        for ( int i=0;i<MAX_DISPLAY_TERMS&&i<match.numTerms();i++ )
-        {
-            int[] vPositions = getVPositions( match.getTermPositions(i), 
-                mvd, firstVersion );
-            if ( hs == null )
-            {
-                if ( vPositions.length==0 )
-                    System.out.println("0");
-                hs = new HitSpan( data, match.getTerm(i), vPositions[0] );
-            }
-            else if ( !hs.wants(match.getTerm(i),vPositions[0]) )
-            {
-                sb.append( hs.toString() );
-                hs = new HitSpan( data, match.getTerm(i), vPositions[0] );
-            }
-            else
-                hs.add( match.getTerm(i), vPositions[0] );
-        }
-        if ( hs != null )
-            sb.append( hs.toString() );
-        sb.append("</p>");
-        String hitText = dehyphenate( sb );
-        JSONObject jObj = new JSONObject();
-        jObj.put(JSONKeys.BODY,hitText);
-        jObj.put(JSONKeys.DOCID,docid);
-        jObj.put(JSONKeys.POSITIONS,toArrayList(match.getPositions()));
-        jObj.put(JSONKeys.VERSION1,mvd.getVersionId((short)firstVersion));
-        jObj.put(JSONKeys.TITLE,getTitle(docid));
-        return jObj;
     }
     /**
      * Get the versions shared by the match from the MVD raw offsets

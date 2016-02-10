@@ -165,10 +165,11 @@ public class HitSpan
     {
         int length = 0;
         int pos = 0;
+        String lcTerm = term.toLowerCase();
         for ( int i=actual;i<context.length();i++ )
         {
-            char token = context.charAt(i);
-            if ( term.charAt(pos)==token )
+            char token = Character.toLowerCase(context.charAt(i));
+            if ( lcTerm.charAt(pos)==token )
                 pos++;
             length++;
             if ( pos == term.length() )
